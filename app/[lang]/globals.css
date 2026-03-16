@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --gtg-orange: #FFA500;
+  --gtg-blue: #1A62C2;
+  --gtg-navy: #1B3D91;
+  --gtg-text: #2C2C2C;
+  --gtg-black: #191919;
+  --gtg-bg: #F7F7F9;
+  --gtg-surface: #FFFFFF;
+  --gtg-border: #E5E9ED;
+  --gtg-muted: #8B959E;
+}
+
+body {
+  @apply bg-[color:var(--gtg-bg)] text-[color:var(--gtg-text)];
+}
+
+@layer base {
+  h1 {
+    font-family: var(--font-montserrat), system-ui, sans-serif;
+  }
+
+  h2, h3, h4, h5, h6 {
+    font-family: var(--font-montserrat), system-ui, sans-serif;
+  }
+
+  body {
+    font-family: var(--font-poppins), system-ui, sans-serif;
+  }
+
+  /* Typography tokens (from Figma) */
+  .gtg-h1 {
+    font-family: var(--font-montserrat), system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 32px;
+    line-height: 34px;
+  }
+
+  .gtg-h2 {
+    font-family: var(--font-montserrat), system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 30px;
+  }
+
+  .gtg-p {
+    font-family: var(--font-poppins), system-ui, sans-serif;
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 26px;
+  }
+}

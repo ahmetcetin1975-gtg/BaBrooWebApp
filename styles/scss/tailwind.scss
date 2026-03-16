@@ -1,0 +1,33 @@
+/* Template Name: Techwind - Tailwind CSS Multipurpose Landing & Admin Dashboard Template
+   Author: Shreethemes
+   Email: support@shreethemes.in
+   Website: https://shreethemes.in
+   Version: 2.3.0
+   Created: May 2022
+   File: Main Css File
+*/
+
+@use "tailwind-reference";
+
+// FONTS
+@use "custom/fonts";
+
+// general
+@use "custom/general";
+
+// structure
+@use "custom/structure/topnav";
+@use "custom/structure/footer";
+
+// pages
+@use "custom/pages/helper";
+@use "custom/pages/hero";
+@use "custom/pages/countdown";
+@use "custom/pages/portfolio";
+@use "custom/pages/contact";
+
+// Plugins
+@use "custom/plugins/swiper-slider";
+@use "custom/plugins/testi";
+@use "custom/plugins/choices";
+@use "custom/plugins/datepicker";

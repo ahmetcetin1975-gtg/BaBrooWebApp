@@ -1,0 +1,44 @@
+@use "../styles/scss/tailwind.scss";
+
+:root {
+  --gtg-orange: #ffa500;
+  --gtg-blue: #1a62c2;
+  --gtg-navy: #1b3d91;
+  --gtg-text: #2c2c2c;
+  --gtg-black: #191919;
+  --gtg-bg: #f7f7f9;
+  --gtg-surface: #ffffff;
+  --gtg-border: #e5e9ed;
+  --gtg-muted: #8b959e;
+}
+
+body > .skiptranslate {
+  display: none !important;
+}
+
+.skiptranslate {
+  display: none !important;
+}
+
+.goog-te-banner-frame {
+  display: none !important;
+}
+
+body {
+  top: 0 !important;
+}
+
+.VIpgJd-ZVi9od-ORHb-OEVmcd {
+  display: none !important;
+  background-color: unset !important;
+  box-shadow: none !important;
+}
+
+.skiptranslate > iframe {
+  height: 0 !important;
+  border-style: none;
+  box-shadow: none;
+}
+
+
+
