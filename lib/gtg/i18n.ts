@@ -1,17 +1,25 @@
 ﻿import { promises as fs } from "fs";
 import path from "path";
-import { normalizeLang, type Lang } from "@/lib/gtg/config";
+import { LANGS, normalizeLang, type Lang } from "@/lib/gtg/config";
 
 export type Dictionary = Record<string, string>;
+
+async function readDictionaryFile(basePath: string, lang: Lang, suffix: "text" | "static"): Promise<string> {
+  const filePath = path.join(basePath, `${lang}-${suffix}.json`);
+  try {
+    return await fs.readFile(filePath, "utf-8");
+  } catch (error) {
+    if (lang === "en") throw error;
+    return fs.readFile(path.join(basePath, `en-${suffix}.json`), "utf-8");
+  }
+}
 
 export async function getDictionary(lang: string): Promise<Dictionary> {
   const normalized = normalizeLang(lang);
   const basePath = path.join(process.cwd(), "public", "assets", "i18n");
-  const textPath = path.join(basePath, `${normalized}-text.json`);
-  const staticPath = path.join(basePath, `${normalized}-static.json`);
   const [textRaw, staticRaw] = await Promise.all([
-    fs.readFile(textPath, "utf-8"),
-    fs.readFile(staticPath, "utf-8"),
+    readDictionaryFile(basePath, normalized, "text"),
+    readDictionaryFile(basePath, normalized, "static"),
   ]);
   const textData = JSON.parse(textRaw) as Dictionary;
   const staticData = JSON.parse(staticRaw) as Dictionary;
@@ -23,7 +31,7 @@ export function t(dictionary: Dictionary, key: string): string {
 }
 
 export function isLangSupported(lang: string): lang is Lang {
-  return lang === "tr" || lang === "en";
+  return (LANGS as readonly string[]).includes(lang);
 }
 
 

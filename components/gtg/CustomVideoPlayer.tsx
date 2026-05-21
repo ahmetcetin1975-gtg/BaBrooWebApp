@@ -73,7 +73,7 @@ export function CustomVideoPlayer({ videoData, coverData }: { videoData: string[
                       <iframe
                         className="iframe-video"
                         src={videoData[currentSlide]}
-                        title="GoTradeGo"
+                        title="Babroo"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         referrerPolicy="strict-origin-when-cross-origin"
                         allowFullScreen

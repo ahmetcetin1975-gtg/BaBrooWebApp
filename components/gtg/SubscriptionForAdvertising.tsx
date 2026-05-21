@@ -14,7 +14,7 @@ export function SubscriptionForAdvertising({
   adImagePathTR,
   adImagePathEN,
 }: {
-  lang: "tr" | "en";
+  lang: string;
   adName: string;
   adImagePathTR: string;
   adImagePathEN: string;

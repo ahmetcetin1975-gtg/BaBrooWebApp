@@ -7,4 +7,4 @@ User-agent: Googlebot
 Disallow:
 
 # Sitemap location
-Sitemap: https://www.gotradego.com/sitemap.xml
+Sitemap: https://www.babroo.com/sitemap.xml

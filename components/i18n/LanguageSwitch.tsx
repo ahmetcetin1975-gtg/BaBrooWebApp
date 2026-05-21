@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import { getMessages } from "@/lib/i18n/messages";
-import { normalizeLang, type Lang } from "@/lib/i18n/languages";
-import { switchLangHref, otherLang } from "@/lib/i18n/routing";
+import { LANGS, LANGUAGE_LABELS, normalizeLang, type Lang } from "@/lib/i18n/languages";
+import { toLangHref } from "@/lib/i18n/routing";
 import { persistLanguagePreference } from "@/lib/i18n/client-language";
 
 type LanguageSwitchProps = {
@@ -25,32 +26,83 @@ export function LanguageSwitch({
 }: LanguageSwitchProps) {
   const pathname = usePathname() ?? "/";
   const currentLang = normalizeLang(lang);
-  const nextLang = otherLang(currentLang);
-  const href = switchLangHref(pathname, currentLang);
   const t = getMessages(currentLang);
-  const nextLabel = nextLang.toUpperCase();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
 
   return (
-    <Link
-      href={href}
-      onClick={() => persistLanguagePreference(nextLang)}
-      className={clsx("group inline-flex items-center gap-2", className)}
-      aria-label={`${t.common.language}: ${currentLang.toUpperCase()} → ${nextLabel}`}
-    >
+    <div ref={rootRef} className={clsx("relative inline-flex items-center gap-2", className)}>
       {showLabel ? <span className={labelClassName}>{t.common.language}</span> : null}
-      <span
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
         className={clsx(
-          "inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-800 shadow-sm transition-colors group-hover:border-neutral-300",
+          "group inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-xs font-semibold text-neutral-800 shadow-sm transition-all duration-200 hover:-translate-y-px hover:border-neutral-300 hover:bg-neutral-50 hover:shadow-md",
           pillClassName
         )}
+        aria-label={`${t.common.language}: ${LANGUAGE_LABELS[currentLang]}`}
+        aria-expanded={open}
+        aria-haspopup="menu"
       >
         <span className="inline-flex items-center gap-1.5">
           <FlagIcon lang={currentLang} />
           <span>{currentLang.toUpperCase()}</span>
         </span>
         <ChevronDownIcon className="h-3 w-3 text-neutral-500" />
-      </span>
-    </Link>
+      </button>
+
+      {open ? (
+        <div
+          role="menu"
+          className="absolute right-0 top-[calc(100%+8px)] z-[1000] min-w-[150px] overflow-hidden rounded-2xl border border-neutral-200 bg-white py-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.16)]"
+        >
+          {LANGS.map((item) => {
+            const isActive = item === currentLang;
+
+            return (
+              <Link
+                key={item}
+                href={toLangHref(pathname, item)}
+                role="menuitem"
+                onClick={() => {
+                  persistLanguagePreference(item);
+                  setOpen(false);
+                }}
+                className={clsx(
+                  "flex items-center gap-2 px-3 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50",
+                  isActive && "bg-neutral-50 text-neutral-950"
+                )}
+              >
+                <FlagIcon lang={item} className="h-4 w-6" />
+                <span>{item.toUpperCase()}</span>
+                <span className="text-xs font-medium text-neutral-400">{LANGUAGE_LABELS[item]}</span>
+              </Link>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -65,7 +117,11 @@ function FlagIcon({ lang, className }: FlagIconProps) {
       className={clsx("inline-flex h-4 w-6 overflow-hidden rounded-sm border border-black/10", className)}
       aria-hidden="true"
     >
-      {lang === "tr" ? <FlagTR /> : <FlagEN />}
+      {lang === "tr" ? <FlagTR /> : null}
+      {lang === "en" ? <FlagEN /> : null}
+      {lang === "ru" ? <FlagRU /> : null}
+      {lang === "es" ? <FlagES /> : null}
+      {lang === "fr" ? <FlagFR /> : null}
     </span>
   );
 }
@@ -86,16 +142,45 @@ function FlagTR() {
 
 function FlagEN() {
   return (
+    <svg viewBox="0 0 60 30" className="h-full w-full" focusable="false" aria-hidden="true">
+      <rect width="60" height="30" fill="#012169" />
+      <polygon points="0,0 6,0 60,24 60,30 54,30 0,6" fill="#FFFFFF" />
+      <polygon points="60,0 54,0 0,24 0,30 6,30 60,6" fill="#FFFFFF" />
+      <polygon points="0,0 3,0 60,28.5 60,30 57,30 0,1.5" fill="#C8102E" />
+      <polygon points="60,0 57,0 0,28.5 0,30 3,30 60,1.5" fill="#C8102E" />
+      <rect x="24" width="12" height="30" fill="#FFFFFF" />
+      <rect y="9" width="60" height="12" fill="#FFFFFF" />
+      <rect x="26" width="8" height="30" fill="#C8102E" />
+      <rect y="11" width="60" height="8" fill="#C8102E" />
+    </svg>
+  );
+}
+
+function FlagRU() {
+  return (
     <svg viewBox="0 0 24 16" className="h-full w-full" focusable="false" aria-hidden="true">
-      <rect width="24" height="16" fill="#012169" />
-      <line x1="0" y1="0" x2="24" y2="16" stroke="#FFFFFF" strokeWidth="4" />
-      <line x1="24" y1="0" x2="0" y2="16" stroke="#FFFFFF" strokeWidth="4" />
-      <line x1="0" y1="0" x2="24" y2="16" stroke="#C8102E" strokeWidth="2" />
-      <line x1="24" y1="0" x2="0" y2="16" stroke="#C8102E" strokeWidth="2" />
-      <rect x="10" y="0" width="4" height="16" fill="#FFFFFF" />
-      <rect x="0" y="6" width="24" height="4" fill="#FFFFFF" />
-      <rect x="11" y="0" width="2" height="16" fill="#C8102E" />
-      <rect x="0" y="7" width="24" height="2" fill="#C8102E" />
+      <rect width="24" height="16" fill="#FFFFFF" />
+      <rect y="5.33" width="24" height="5.34" fill="#0039A6" />
+      <rect y="10.67" width="24" height="5.33" fill="#D52B1E" />
+    </svg>
+  );
+}
+
+function FlagES() {
+  return (
+    <svg viewBox="0 0 24 16" className="h-full w-full" focusable="false" aria-hidden="true">
+      <rect width="24" height="16" fill="#AA151B" />
+      <rect y="4" width="24" height="8" fill="#F1BF00" />
+    </svg>
+  );
+}
+
+function FlagFR() {
+  return (
+    <svg viewBox="0 0 24 16" className="h-full w-full" focusable="false" aria-hidden="true">
+      <rect width="8" height="16" fill="#002395" />
+      <rect x="8" width="8" height="16" fill="#FFFFFF" />
+      <rect x="16" width="8" height="16" fill="#ED2939" />
     </svg>
   );
 }

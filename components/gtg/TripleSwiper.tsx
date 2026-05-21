@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTranslate } from "@/components/gtg/TranslationProvider";
 
-export function TripleSwiper({ lang }: { lang: "tr" | "en" }) {
+export function TripleSwiper({ lang }: { lang: string }) {
   const t = useTranslate();
 
   return (
@@ -27,7 +27,7 @@ export function TripleSwiper({ lang }: { lang: "tr" | "en" }) {
                 <div className="md:col-span-6">
                   <div className="relative">
                     <div className="relative rounded-xl overflow-hidden shadow-md dark:shadow-gray-800 bg-no-repeat">
-                      <div className="w-full py-72 bg-slate-400 bg-[url('/assets/images/gotradego/fts.png')] bg-cover bg-no-repeat bg-top jarallax mobile-image-container" data-jarallax data-speed="0.5"></div>
+                      <div className="w-full py-72 bg-slate-400 bg-[url('/assets/images/babroo/fts.png')] bg-cover bg-no-repeat bg-top jarallax mobile-image-container" data-jarallax data-speed="0.5"></div>
                     </div>
                     <div className="absolute flex justify-between items-center md:bottom-10 bottom-5 md:-start-16 p-4 rounded-lg shadow-md dark:shadow-gray-800 bg-white dark:bg-slate-900 w-60 m-3">
                       <div className="flex items-center">
@@ -76,7 +76,7 @@ export function TripleSwiper({ lang }: { lang: "tr" | "en" }) {
                 <div className="md:col-span-6">
                   <div className="relative">
                     <div className="relative rounded-xl overflow-hidden shadow-md dark:shadow-gray-800">
-                      <div className="w-full py-72 bg-slate-400 bg-[url('/assets/images/gotradego/logistic-depot-small.png')] bg-cover bg-no-repeat bg-top jarallax mobile-image-container" data-jarallax data-speed="0.5"></div>
+                      <div className="w-full py-72 bg-slate-400 bg-[url('/assets/images/babroo/logistic-depot-small.png')] bg-cover bg-no-repeat bg-top jarallax mobile-image-container" data-jarallax data-speed="0.5"></div>
                     </div>
                     <div className="absolute flex justify-between items-center md:bottom-10 bottom-5 md:-start-16 p-4 rounded-lg shadow-md dark:shadow-gray-800 bg-white dark:bg-slate-900 w-60 m-3">
                       <div className="flex items-center">
@@ -125,7 +125,7 @@ export function TripleSwiper({ lang }: { lang: "tr" | "en" }) {
                 <div className="md:col-span-6">
                   <div className="relative">
                     <div className="relative rounded-xl overflow-hidden shadow-md dark:shadow-gray-800">
-                      <div className="w-full py-72 bg-slate-400 bg-[url('/assets/images/gotradego/global-network-2.jpg')] bg-cover bg-no-repeat bg-top jarallax mobile-image-container" data-jarallax data-speed="0.5"></div>
+                      <div className="w-full py-72 bg-slate-400 bg-[url('/assets/images/babroo/global-network-2.jpg')] bg-cover bg-no-repeat bg-top jarallax mobile-image-container" data-jarallax data-speed="0.5"></div>
                     </div>
                     <div className="absolute flex justify-between items-center md:bottom-10 bottom-5 md:-start-16 p-4 rounded-lg shadow-md dark:shadow-gray-800 bg-white dark:bg-slate-900 w-60 m-3">
                       <div className="flex items-center">

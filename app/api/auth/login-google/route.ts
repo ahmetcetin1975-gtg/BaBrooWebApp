@@ -1,13 +1,14 @@
 ﻿import { NextResponse } from "next/server";
 import { proxyJson } from "@/lib/server/proxy";
 import { extractTokens } from "@/lib/server/tokenMap";
+import { langToDil, normalizeDil } from "@/lib/i18n/languages";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const { id_token, idToken, credential, lang, dil, playerId, platform } = body;
   const resolvedIdToken = String(id_token ?? idToken ?? credential ?? "").trim();
   const resolvedLang = String(lang ?? "").toLowerCase();
-  const resolvedDil = typeof dil === "number" ? dil : resolvedLang === "tr" ? 1 : 2;
+  const resolvedDil = typeof dil === "number" ? normalizeDil(dil) : langToDil(resolvedLang);
 
   if (!resolvedIdToken) {
     return NextResponse.json({ message: "idToken required" }, { status: 400 });

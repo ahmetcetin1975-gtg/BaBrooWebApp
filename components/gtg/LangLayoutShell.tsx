@@ -18,13 +18,15 @@ type LangLayoutShellProps = {
 export function LangLayoutShell({ children, lang }: LangLayoutShellProps) {
   const pathname = usePathname() ?? "/";
   const normalizedPath = useMemo(() => {
-    const stripped = pathname.replace(/^\/(tr|en)/, "");
+    const stripped = pathname.replace(/^\/(tr|en|ru|es|fr)/, "");
     return stripped === "" ? "/" : stripped;
   }, [pathname]);
 
   const isRegister = normalizedPath === "/register" || normalizedPath.startsWith("/register/");
   const isLogin = normalizedPath === "/login" || normalizedPath.startsWith("/login/");
-  const isAuthPage = isRegister || isLogin;
+  const isForgotPassword =
+    normalizedPath === "/forgot-password" || normalizedPath.startsWith("/forgot-password/");
+  const isAuthPage = isRegister || isLogin || isForgotPassword;
   const isHome = normalizedPath === "/home" || normalizedPath.startsWith("/home/");
   const needsAuthProvider = isAuthPage || isHome;
   const isStandaloneLayout = isAuthPage || isHome;

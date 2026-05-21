@@ -16,7 +16,7 @@ export function Subscription({
   adImagePath = "",
   rotatorMessage,
 }: {
-  lang: "tr" | "en";
+  lang: string;
   showRoadMap?: boolean;
   showAdImage?: boolean;
   adImagePath?: string;

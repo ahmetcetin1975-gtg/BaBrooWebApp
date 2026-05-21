@@ -13,14 +13,16 @@ export function Tabs({
   items: { value: string; label: string }[];
 }) {
   return (
-    <div className="inline-flex rounded-lg bg-neutral-100 p-1">
+    <div className="inline-flex rounded-xl bg-neutral-100 p-1.5">
       {items.map((it) => (
         <button
           key={it.value}
           onClick={() => onChange(it.value)}
           className={clsx(
-            "px-3 py-1.5 text-sm rounded-md transition",
-            value === it.value ? "bg-white shadow text-neutral-900" : "text-neutral-500 hover:text-neutral-800"
+            "rounded-lg px-4 py-2 text-[15px] font-semibold transition-all duration-200 sm:text-[16px]",
+            value === it.value
+              ? "bg-white text-neutral-900 shadow-sm hover:-translate-y-px hover:shadow-md"
+              : "text-neutral-500 hover:-translate-y-px hover:bg-white/80 hover:text-neutral-800"
           )}
         >
           {it.label}

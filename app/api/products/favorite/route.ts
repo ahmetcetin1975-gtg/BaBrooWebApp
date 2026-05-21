@@ -9,7 +9,8 @@ function parsePositiveInt(value: string | null): number | null {
 }
 
 function normalizeDil(value: string | null): number {
-  return value === "2" ? 2 : 1;
+  const parsed = Number(value ?? 1);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : 1;
 }
 
 function normalizeKaynak(value: string | null): number {

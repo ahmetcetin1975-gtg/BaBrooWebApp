@@ -1,74 +1,137 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBlogByLink } from "@/lib/gtg/api";
-import { BaseAppConfig, normalizeLang } from "@/lib/gtg/config";
-import { RecentPosts } from "@/components/gtg/RecentPosts";
+import { ArrowLeft, CalendarDays, Tag } from "lucide-react";
+import { BrandHeader } from "@/components/layout/BrandHeader";
+import { resolveBlogImageUrl } from "@/lib/blog/images";
+import { langToDil, localeForLang, normalizeLang, type Lang } from "@/lib/gtg/config";
+import { proxyJson } from "@/lib/server/proxy";
+
+type BlogDetailItem = {
+  Nr?: number;
+  BlogResim?: string | null;
+  BlogResimUrl?: string | null;
+  Baslik?: string | null;
+  Kategori?: string | null;
+  Etiketler?: string | null;
+  BlogBaslik?: string | null;
+  BlogAciklama?: string | null;
+  BlogKategori?: string | null;
+  BlogEtiketler?: string | null;
+  Aciklama?: string | null;
+  BlogYayinTarihi?: string | null;
+  Aktif?: boolean | null;
+};
+
+type BlogDetailResponse = {
+  Data?: BlogDetailItem | null;
+};
+
+function formatDate(value: string | null | undefined, lang: Lang): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(localeForLang(lang), {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+const BLOG_DETAIL_COPY: Record<Lang, { backToBlogHome: string }> = {
+  tr: { backToBlogHome: "Blog ana sayfasına dön" },
+  en: { backToBlogHome: "Back to blog home" },
+  ru: { backToBlogHome: "Вернуться к блогу" },
+  es: { backToBlogHome: "Volver al blog" },
+  fr: { backToBlogHome: "Retour au blog" },
+};
+
+function parseTags(tags: string | null | undefined): string[] {
+  return String(tags ?? "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
 
 export default async function Page({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const resolvedParams = await params;
   const lang = normalizeLang(resolvedParams.lang);
-  const blog = await getBlogByLink(resolvedParams.id);
-  if (!blog?.blog?.Id) {
+  const id = Number(resolvedParams.id);
+  const dil = langToDil(lang);
+
+  if (!Number.isInteger(id) || id <= 0) {
     notFound();
   }
 
-  const content = (blog.blog.Yazi ?? "").replace(/\r\n/g, "<br>");
-  const dateValue = blog.blog.Tarih ? new Date(blog.blog.Tarih) : null;
-  const formattedDate = dateValue
-    ? new Intl.DateTimeFormat(lang === "tr" ? "tr-TR" : "en-US", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).format(dateValue)
-    : "";
+  const path = `${process.env.BLOG_GET_ID_PATH ?? "/api/Blog/getid"}/${id}?${new URLSearchParams({ dil: String(dil) }).toString()}`;
+  const result = await proxyJson({ path, method: "GET", forwardAuth: false }).catch(() => null);
+
+  if (!result?.res.ok) {
+    notFound();
+  }
+
+  const blog = (result.data as BlogDetailResponse | undefined)?.Data;
+  if (!blog?.Nr) {
+    notFound();
+  }
+
+  const copy = BLOG_DETAIL_COPY[lang];
+  const title = String(blog.Baslik ?? blog.BlogBaslik ?? "").trim();
+  const description = String(blog.Aciklama ?? blog.BlogAciklama ?? "").trim();
+  const category = String(blog.Kategori ?? blog.BlogKategori ?? "").trim();
+  const tags = blog.Etiketler ?? blog.BlogEtiketler;
+  const content = description.replace(/\r\n|\n/g, "<br>");
+  const imageSrc = resolveBlogImageUrl(blog.BlogResimUrl, blog.BlogResim);
 
   return (
     <>
-      <section className="relative table w-full py-32 lg:py-36 bg-[url('/assets/images/gotradego/blog-detail.png')] bg-center bg-no-repeat bg-cover">
-        <div className="absolute inset-0 bg-black opacity-80"></div>
-        <div className="container relative">
-          <div className="grid grid-cols-1 pb-8 text-center mt-10">
-            <h3 className="md:text-4xl text-3xl md:leading-normal leading-normal font-medium text-white">{blog.blog.MenuAdi}</h3>
+      <section className="relative overflow-hidden border-b border-[#f0e4d5] bg-[radial-gradient(circle_at_top_left,_rgba(255,118,1,0.18),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(3,8,194,0.10),_transparent_32%),linear-gradient(180deg,#fffaf4_0%,#ffffff_100%)]">
+        <div className="container relative pb-14 pt-28 sm:pt-32">
+          <BrandHeader height={28} href={`/${lang}/`} />
+          <div className="mt-8 max-w-4xl">
+            <Link href={`/${lang}/blog`} className="inline-flex items-center gap-2 text-sm font-semibold text-[#607080] transition hover:text-[#111827]">
+              <ArrowLeft className="h-4 w-4" />
+              {copy.backToBlogHome}
+            </Link>
+            <h1 className="mt-6 text-4xl font-semibold leading-tight tracking-[-0.04em] text-[#16202b] md:text-6xl">
+              {title}
+            </h1>
+            <div className="mt-6 flex flex-wrap gap-4 text-sm text-slate-500">
+              {blog.BlogYayinTarihi ? (
+                <span className="inline-flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4" />
+                  {formatDate(blog.BlogYayinTarihi, lang)}
+                </span>
+              ) : null}
+              {category ? (
+                <span className="inline-flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  {category}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
-        <div className="absolute text-center z-10 bottom-5 start-0 end-0 mx-3">
-          <ul className="tracking-[0.5px] mb-0 inline-block">
-            <li className="inline-block text-[13px] font-bold duration-500 ease-in-out text-white/50 hover:text-white">
-              <Link href={`/${lang}/`}>{BaseAppConfig.appName}</Link>
-            </li>
-            <li className="inline-block text-base text-white/50 mx-0.5 ltr:rotate-0 rtl:rotate-180"><i className="uil uil-angle-right-b"></i></li>
-            <li className="inline-block uppercase text-[13px] font-bold duration-500 ease-in-out text-white" aria-current="page">Blog</li>
-          </ul>
-        </div>
       </section>
-      <div className="relative">
-        <div className="shape absolute sm:-bottom-px -bottom-[2px] start-0 end-0 overflow-hidden z-1 text-white dark:text-slate-900">
-          <svg className="w-full h-auto scale-[2.0] origin-top" viewBox="0 0 2880 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 48H1437.5H2880V0H2160C1442.5 52 720 0 720 0H0V48Z" fill="currentColor"></path>
-          </svg>
-        </div>
-      </div>
 
-      <section className="relative md:pb-24 md:pt-40 pb-16 pt-36">
-        <div className="container relative">
-          <div className="grid md:grid-cols-12 grid-cols-1 gap-[30px]">
-            <div className="lg:col-span-8 md:col-span-6">
-              <div className="p-6 rounded-md shadow dark:shadow-gray-800">
-                <img src={`${BaseAppConfig.oldAppImagePath}${blog.images?.ResimAdi ?? ""}`} className="rounded-md" alt="" />
-                <div className="text-center mt-12">
-                  <span className="inline-block text-white text-xs font-semibold px-2.5 py-0.5 rounded-full h-5">{blog.blog.MenuAdi}</span>
-                  <ul className="list-none mt-6">
-                    <li className="inline-block font-semibold text-slate-400 mx-4">
-                      <span className="text-slate-900 dark:text-white block">Date :</span>
-                      <span className="block">{formattedDate}</span>
-                    </li>
-                  </ul>
+      <section className="bg-white py-14 md:py-20">
+        <div className="container">
+          <div className="mx-auto max-w-4xl">
+            <div className="rounded-[32px] border border-[#ece1d3] bg-[#fffdf9] px-6 py-8 shadow-[0_30px_90px_rgba(17,24,39,0.05)] md:px-10 md:py-12">
+              {imageSrc ? (
+                <div className="mb-8 overflow-hidden rounded-[24px] border border-[#ece1d3] bg-[#f6f1ea]">
+                  <img src={imageSrc} alt={title} className="h-64 w-full object-contain md:h-80 lg:h-96" />
                 </div>
-                <div className="mt-6" dangerouslySetInnerHTML={{ __html: content }}></div>
+              ) : null}
+              {content ? (
+                <div className="prose prose-slate max-w-none prose-headings:text-[#16202b] prose-p:leading-8" dangerouslySetInnerHTML={{ __html: content }} />
+              ) : null}
+              <div className="mt-8 flex flex-wrap gap-2">
+                {parseTags(tags).map((tag) => (
+                  <span key={tag} className="rounded-full border border-[#ece2d5] bg-[#fff9f3] px-3 py-1 text-xs font-medium text-[#6b7280]">
+                    #{tag}
+                  </span>
+                ))}
               </div>
-            </div>
-            <div className="lg:col-span-4 md:col-span-6">
-              <RecentPosts lang={lang} />
             </div>
           </div>
         </div>
@@ -76,7 +139,3 @@ export default async function Page({ params }: { params: Promise<{ lang: string;
     </>
   );
 }
-
-
-
-

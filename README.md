@@ -1,8 +1,8 @@
-# GoTradeGoWebApp
+# BabrooWebApp
 
 Next.js 16 (App Router) + Tailwind 4 + Cookie Auth + Email/Phone/Google Login (GIS)
 
-Backend: API proxy handlers (varsayılan root: https://apitest.gotradego.com)
+Backend: API proxy handlers (varsayılan root: http://localhost:8081)
 
 ## Kurulum
 ```bash
@@ -11,6 +11,8 @@ cp .env.example .env.local
 # .env.local içine NEXT_PUBLIC_GOOGLE_CLIENT_ID ekle
 npm run dev
 ```
+
+Local gelistirme adresi: `http://localhost:3001`
 
 ## URL'ler
 - /tr/login

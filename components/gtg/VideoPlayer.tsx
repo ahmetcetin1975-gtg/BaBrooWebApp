@@ -62,7 +62,7 @@ export function VideoPlayer({ videoData }: { videoData: string[] }) {
                     <iframe
                       className="iframe-video"
                       src={videoData[currentSlide]}
-                      title="GoTradeGo"
+                      title="Babroo"
                       frameBorder={0}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                       referrerPolicy="strict-origin-when-cross-origin"

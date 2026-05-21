@@ -8,7 +8,7 @@ import { CustomVideoPlayer } from "@/components/gtg/CustomVideoPlayer";
 import { Subscription } from "@/components/gtg/Subscription";
 import { Clients } from "@/components/gtg/Clients";
 
-export function HowDoesItWorkPage({ lang }: { lang: "tr" | "en" }) {
+export function HowDoesItWorkPage({ lang }: { lang: string }) {
   const t = useTranslate();
   const videoData = getHowDoesItWorkVideoData();
   const coverData = [
@@ -16,19 +16,19 @@ export function HowDoesItWorkPage({ lang }: { lang: "tr" | "en" }) {
       label: "LCOD_LBL_ACTIVE_FTS",
       value: 76,
       icon: "uil uil-globe",
-      background: "/assets/images/gotradego/join-network.jpg",
+      background: "/assets/images/babroo/join-network.jpg",
     },
     {
       label: "LCOD_LBL_SUCCESS_SPECIALISTS",
       value: 1200,
       icon: "mdi mdi-account-star",
-      background: "/assets/images/gotradego/join-network.jpg",
+      background: "/assets/images/babroo/join-network.jpg",
     },
     {
       label: "LCOD_LBL_MANAGE_YOUR_FOREIGN_TRADE",
       value: 84,
       icon: "mdi mdi-briefcase",
-      background: "/assets/images/gotradego/join-network.jpg",
+      background: "/assets/images/babroo/join-network.jpg",
     },
   ];
   const feature = [

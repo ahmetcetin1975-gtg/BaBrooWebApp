@@ -1,3 +1,4 @@
+import Link from "next/link";
 import Image from "next/image";
 import clsx from "clsx";
 
@@ -6,6 +7,7 @@ type BrandHeaderProps = {
   label?: string;
   className?: string;
   priority?: boolean;
+  href?: string;
 };
 
 const LOGO_SIZE = { width: 44, height: 43 };
@@ -15,28 +17,56 @@ function scaleWidth(targetHeight: number, original: { width: number; height: num
   return Math.round((original.width / original.height) * targetHeight);
 }
 
-export function BrandHeader({ height = 20, label = "GoTradeGo", className, priority }: BrandHeaderProps) {
+type BrandHeaderImageProps = {
+  src: string;
+  width: number;
+  height: number;
+  priority?: boolean;
+  sizes: string;
+};
+
+function BrandHeaderImage({ src, width, height, priority, sizes }: BrandHeaderImageProps) {
+  return (
+    <span className="relative block shrink-0" style={{ width, height }}>
+      <Image src={src} alt="" aria-hidden="true" fill sizes={sizes} className="object-contain" priority={priority} />
+    </span>
+  );
+}
+
+export function BrandHeader({ height = 20, label = "Babroo", className, priority, href }: BrandHeaderProps) {
   const logoWidth = scaleWidth(height, LOGO_SIZE);
   const wordmarkWidth = scaleWidth(height, WORDMARK_SIZE);
-
-  return (
-    <span role="img" aria-label={label} className={clsx("inline-flex items-center gap-2", className)}>
-      <Image
-        src="/assets/images/_gtg_new/GTG_navy_logo.svg"
-        alt=""
-        aria-hidden="true"
+  const content = (
+    <>
+      <BrandHeaderImage
+        src="/assets/images/babroo/logo-mark.png"
         width={logoWidth}
         height={height}
         priority={priority}
+        sizes={`${logoWidth}px`}
       />
-      <Image
-        src="/assets/images/_gtg_new/GTG_navy_yazi.svg"
-        alt=""
-        aria-hidden="true"
+      <BrandHeaderImage
+        src="/assets/images/babroo/logo-wordmark.png"
         width={wordmarkWidth}
         height={height}
         priority={priority}
+        sizes={`${wordmarkWidth}px`}
       />
+    </>
+  );
+  const classes = clsx("inline-flex items-center gap-2", href && "transition-opacity hover:opacity-85", className);
+
+  if (href) {
+    return (
+      <Link href={href} aria-label={label} className={classes}>
+        {content}
+      </Link>
+    );
+  }
+
+  return (
+    <span role="img" aria-label={label} className={classes}>
+      {content}
     </span>
   );
 }

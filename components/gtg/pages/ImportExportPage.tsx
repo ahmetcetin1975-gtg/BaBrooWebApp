@@ -8,15 +8,15 @@ import { CustomVideoPlayer } from "@/components/gtg/CustomVideoPlayer";
 import { Subscription } from "@/components/gtg/Subscription";
 import { Clients } from "@/components/gtg/Clients";
 
-export function ImportExportPage({ lang }: { lang: "tr" | "en" }) {
+export function ImportExportPage({ lang }: { lang: string }) {
   const t = useTranslate();
   const servicesData = getServicesData();
   const advantagesData = getAdvantagesData();
   const videoData = getVideoData2();
   const coverData = [
-    { label: "LCOD_LBL_COMPANY_FOREIGN_TRADE", value: 45, icon: "uil uil-globe", background: "/assets/images/gotradego/success-stairs.jpg" },
-    { label: "LCOD_LBL_SUCCESS_EXPORT", value: 150, icon: "mdi mdi-export", background: "/assets/images/gotradego/success-stairs.jpg" },
-    { label: "LCOD_LBL_SUCCESS_IMPORT", value: 233, icon: "mdi mdi-import", background: "/assets/images/gotradego/success-stairs.jpg" },
+    { label: "LCOD_LBL_COMPANY_FOREIGN_TRADE", value: 45, icon: "uil uil-globe", background: "/assets/images/babroo/success-stairs.jpg" },
+    { label: "LCOD_LBL_SUCCESS_EXPORT", value: 150, icon: "mdi mdi-export", background: "/assets/images/babroo/success-stairs.jpg" },
+    { label: "LCOD_LBL_SUCCESS_IMPORT", value: 233, icon: "mdi mdi-import", background: "/assets/images/babroo/success-stairs.jpg" },
   ];
 
   return (

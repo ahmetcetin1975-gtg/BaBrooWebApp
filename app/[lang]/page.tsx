@@ -1,13 +1,15 @@
-import React from "react";
 import { IndexPage } from "@/components/gtg/pages/IndexPage";
 import { normalizeLang } from "@/lib/gtg/config";
+import { getCareCategories } from "@/lib/gtg/api";
 
 type PageProps = {
   params: Promise<{ lang: string }>;
 };
 
-export default function Page({ params }: PageProps) {
-  const { lang } = React.use(params);
-  return <IndexPage lang={normalizeLang(lang)} />;
-}
+export default async function Page({ params }: PageProps) {
+  const { lang } = await params;
+  const normalizedLang = normalizeLang(lang);
+  const careCategories = await getCareCategories(normalizedLang);
 
+  return <IndexPage lang={normalizedLang} careCategories={careCategories} />;
+}

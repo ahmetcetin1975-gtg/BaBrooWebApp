@@ -2,9 +2,9 @@
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "GoTradeGo",
-    short_name: "GoTradeGo",
-    description: "GoTradeGo Web App",
+    name: "Babroo",
+    short_name: "Babroo",
+    description: "Babroo Web App",
     start_url: "/tr",
     display: "standalone",
     background_color: "#F7F7F9",

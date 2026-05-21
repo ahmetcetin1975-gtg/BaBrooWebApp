@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { TopBar } from "@/components/layout/TopBar";
 import { api } from "@/lib/api/client";
-import { normalizeLang } from "@/lib/i18n/languages";
+import { langToDil, localeForLang, normalizeLang, type Lang } from "@/lib/i18n/languages";
 import { CUSTOMER_UPDATED_EVENT, type CustomerUpdatedDetail } from "@/lib/customer/events";
 
 type MissionItem = {
@@ -24,38 +24,99 @@ type MissionsResponse = {
   Data?: MissionItem[] | null;
 };
 
+const MISSIONS_TEXT: Record<
+  Lang,
+  {
+    title: string;
+    desc: string;
+    loading: string;
+    empty: string;
+    takeCoin: string;
+    done: string;
+    loadError: string;
+    completeError: string;
+  }
+> = {
+  tr: {
+    title: "Görevler",
+    desc: "Görevleri tamamlayın ve coin kazanın.",
+    loading: "Görevler yükleniyor...",
+    empty: "Aktif görev bulunamadı.",
+    takeCoin: "Coini Al",
+    done: "Görev Tamamlandı",
+    loadError: "Görevler yüklenemedi.",
+    completeError: "Görev tamamlanamadı.",
+  },
+  en: {
+    title: "Missions",
+    desc: "Complete missions and earn coins.",
+    loading: "Loading missions...",
+    empty: "No active missions found.",
+    takeCoin: "Take the Coin",
+    done: "Mission Completed",
+    loadError: "Failed to load missions.",
+    completeError: "Failed to complete mission.",
+  },
+  ru: {
+    title: "Задания",
+    desc: "Выполняйте задания и зарабатывайте coin.",
+    loading: "Задания загружаются...",
+    empty: "Активные задания не найдены.",
+    takeCoin: "Получить coin",
+    done: "Задание выполнено",
+    loadError: "Не удалось загрузить задания.",
+    completeError: "Не удалось выполнить задание.",
+  },
+  es: {
+    title: "Misiones",
+    desc: "Completa misiones y gana coin.",
+    loading: "Cargando misiones...",
+    empty: "No se encontraron misiones activas.",
+    takeCoin: "Tomar coin",
+    done: "Misión completada",
+    loadError: "No se pudieron cargar las misiones.",
+    completeError: "No se pudo completar la misión.",
+  },
+  fr: {
+    title: "Missions",
+    desc: "Terminez des missions et gagnez des coin.",
+    loading: "Chargement des missions...",
+    empty: "Aucune mission active trouvée.",
+    takeCoin: "Récupérer le coin",
+    done: "Mission terminée",
+    loadError: "Impossible de charger les missions.",
+    completeError: "Impossible de terminer la mission.",
+  },
+};
+
+function formatMissionHeadline(lang: Lang, coin: string, fallbackTitle: string): string {
+  if (coin === "-") return fallbackTitle;
+  switch (lang) {
+    case "tr":
+      return `${coin} Coin Kazan!`;
+    case "ru":
+      return `Бесплатно ${coin} Coin!`;
+    case "es":
+      return `${coin} Coin gratis!`;
+    case "fr":
+      return `${coin} Coin gratuit!`;
+    case "en":
+    default:
+      return `Free ${coin} Coin!`;
+  }
+}
+
 export default function MissionsPage() {
   const params = useParams<{ lang?: string | string[] }>();
   const rawLang = Array.isArray(params?.lang) ? params?.lang[0] : params?.lang;
   const lang = normalizeLang(rawLang ?? "tr");
-  const dil = lang === "tr" ? 1 : 2;
+  const dil = langToDil(lang);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [missions, setMissions] = useState<MissionItem[]>([]);
   const [missionSubmittingNr, setMissionSubmittingNr] = useState<number | null>(null);
-  const locale = lang === "tr" ? "tr-TR" : "en-US";
-
-  const text = useMemo(
-    () =>
-      lang === "tr"
-        ? {
-            title: "Görevler",
-            desc: "Görevleri tamamlayın ve coin kazanın.",
-            loading: "Görevler yükleniyor...",
-            empty: "Aktif görev bulunamadı.",
-            takeCoin: "Coini Al",
-            done: "Görev Tamamlandı",
-          }
-        : {
-            title: "Missions",
-            desc: "Complete missions and earn coins.",
-            loading: "Loading missions...",
-            empty: "No active missions found.",
-            takeCoin: "Take the Coin",
-            done: "Mission Completed",
-          },
-    [lang]
-  );
+  const locale = localeForLang(lang);
+  const text = useMemo(() => MISSIONS_TEXT[lang], [lang]);
 
   function formatMissionCoin(value: number | undefined): string {
     if (typeof value !== "number" || !Number.isFinite(value)) return "-";
@@ -67,8 +128,7 @@ export default function MissionsPage() {
 
   function getMissionHeadline(item: MissionItem, fallbackTitle: string): string {
     const coin = formatMissionCoin(item.GorevCoin);
-    if (coin === "-") return fallbackTitle;
-    return lang === "tr" ? `${coin} Coin Kazan!` : `Free ${coin} Coin!`;
+    return formatMissionHeadline(lang, coin, fallbackTitle);
   }
 
   async function handleMissionComplete(item: MissionItem) {
@@ -91,7 +151,7 @@ export default function MissionsPage() {
         new CustomEvent<CustomerUpdatedDetail>(CUSTOMER_UPDATED_EVENT, { detail: {} })
       );
     } catch (err: any) {
-      setError(String(err?.message ?? "Failed to complete mission"));
+      setError(String(err?.message ?? text.completeError));
     } finally {
       setMissionSubmittingNr(null);
     }
@@ -110,7 +170,7 @@ export default function MissionsPage() {
         setMissions(items.filter((item) => item?.Aktif !== false));
       } catch (err: any) {
         if (cancelled) return;
-        setError(String(err?.message ?? "Failed to load missions"));
+        setError(String(err?.message ?? text.loadError));
         setMissions([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -120,7 +180,7 @@ export default function MissionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [dil]);
+  }, [dil, text.loadError]);
 
   return (
     <div className="min-h-screen">

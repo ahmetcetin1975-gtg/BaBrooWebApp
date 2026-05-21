@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslate } from "@/components/gtg/TranslationProvider";
-import { BaseAppConfig } from "@/lib/gtg/config";
+import { BaseAppConfig, localeForLang } from "@/lib/gtg/config";
 import { getRecentBlogs } from "@/lib/gtg/api";
 
-export function RecentPosts({ lang }: { lang: "tr" | "en" }) {
+export function RecentPosts({ lang }: { lang: string }) {
   const t = useTranslate();
   const [blogData, setBlogData] = useState<any[]>([]);
 
@@ -26,7 +26,7 @@ export function RecentPosts({ lang }: { lang: "tr" | "en" }) {
   const formatDate = (value: string | null | undefined) => {
     if (!value) return "";
     try {
-      return new Intl.DateTimeFormat(lang === "tr" ? "tr-TR" : "en-US", {
+      return new Intl.DateTimeFormat(localeForLang(lang), {
         day: "numeric",
         month: "long",
         year: "numeric",
@@ -59,27 +59,27 @@ export function RecentPosts({ lang }: { lang: "tr" | "en" }) {
       <h5 className="text-lg font-semibold bg-gray-50 dark:bg-slate-800 shadow dark:shadow-gray-800 rounded-md p-2 text-center mt-8">{t("LCOD_LBL_SOCIAL_MEDIA")}</h5>
       <ul className="list-none text-center mt-8">
         <li className="inline">
-          <a href="https://www.linkedin.com/company/gotradego/" target="_blank" className="size-8 text-blue-500 inline-flex items-center justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
+          <a href="https://www.linkedin.com/company/babroo/" target="_blank" className="size-8 text-blue-500 inline-flex items-center justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
             <i className="uil uil-linkedin" title="Linkedin"></i>
           </a>
         </li>
         <li className="inline">
-          <a href="https://www.facebook.com/gotradegocom?locale=tr_TR" target="_blank" className="size-8 text-blue-600 inline-flex items-center justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
+          <a href="https://www.facebook.com/babroocom?locale=tr_TR" target="_blank" className="size-8 text-blue-600 inline-flex items-center justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
             <i className="uil uil-facebook-f align-middle" title="facebook"></i>
           </a>
         </li>
         <li className="inline">
-          <a href="https://www.instagram.com/gotradego/" target="_blank" className="size-8 inline-flex text-pink-600 items-center justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
+          <a href="https://www.instagram.com/babroo/" target="_blank" className="size-8 inline-flex text-pink-600 items-center justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
             <i className="uil uil-instagram align-middle" title="instagram"></i>
           </a>
         </li>
         <li className="inline">
-          <a href="https://x.com/gotradego" target="_blank" className="size-8 inline-flex items-center text-blue-500 justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
+          <a href="https://x.com/babroo" target="_blank" className="size-8 inline-flex items-center text-blue-500 justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
             <i className="uil uil-twitter align-middle" title="twitter"></i>
           </a>
         </li>
         <li className="inline">
-          <a href="https://www.youtube.com/@gotradego602" target="_blank" className="size-8 inline-flex text-red-500 items-center justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
+          <a href="https://www.youtube.com/@babroo602" target="_blank" className="size-8 inline-flex text-red-500 items-center justify-center tracking-wide align-middle duration-500 text-base text-center border border-gray-800 rounded-md hover:border-indigo-600 dark:hover:border-indigo-600 hover:bg-indigo-600 dark:hover:bg-indigo-600" rel="noreferrer">
             <i className="uil uil-youtube align-middle" title="youtube"></i>
           </a>
         </li>
@@ -87,5 +87,4 @@ export function RecentPosts({ lang }: { lang: "tr" | "en" }) {
     </div>
   );
 }
-
 

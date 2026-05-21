@@ -10,7 +10,7 @@ export function Paginator({
   totalItems,
   tableSize,
 }: {
-  lang: "tr" | "en";
+  lang: string;
   baseRoute: string;
   currentPage: number;
   totalItems: number;

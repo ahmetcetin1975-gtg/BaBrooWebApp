@@ -6,12 +6,12 @@ import { SubscriptionForAdvertising } from "@/components/gtg/SubscriptionForAdve
 import { CustomVideoPlayer } from "@/components/gtg/CustomVideoPlayer";
 import { Clients } from "@/components/gtg/Clients";
 
-export function ExpertAdvertisingPage({ lang }: { lang: "tr" | "en" }) {
+export function ExpertAdvertisingPage({ lang }: { lang: string }) {
   const t = useTranslate();
   const videoData = getHowDoesItWorkVideoData();
   const coverData = [
-    { label: "LCOD_LBL_ACTIVE_FTS", value: 76, icon: "uil uil-globe", background: "/assets/images/gotradego/join-network.jpg" },
-    { label: "LCOD_LBL_SUCCESS_SPECIALISTS", value: 1200, icon: "mdi mdi-account-star", background: "/assets/images/gotradego/join-network.jpg" },
+    { label: "LCOD_LBL_ACTIVE_FTS", value: 76, icon: "uil uil-globe", background: "/assets/images/babroo/join-network.jpg" },
+    { label: "LCOD_LBL_SUCCESS_SPECIALISTS", value: 1200, icon: "mdi mdi-account-star", background: "/assets/images/babroo/join-network.jpg" },
   ];
   const feature = [
     { icon: "mdi mdi-account-plus-outline", title: "LCOD_LBL_FTS_SPEC_TITLE1", desc: "LCOD_LBL_FTS_SPEC_DESC1" },

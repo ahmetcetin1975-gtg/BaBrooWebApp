@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import { apiRoot } from "@/lib/api-root";
 
 type ProxyOptions = {
   path: string;
@@ -7,17 +8,26 @@ type ProxyOptions = {
   forwardAuth?: boolean;
 };
 
-function apiRoot() {
-  return (
-    process.env.API_ROOT ||
-    process.env.NEXT_PUBLIC_API_ROOT ||
-    "https://apitest.gotradego.com"
-  ).replace(/\/$/, "");
+export function resolveApiRoot(host: string | null) {
+  const explicitRoot = apiRoot();
+  const normalizedHost = String(host ?? "").trim().toLowerCase();
+  const isLocalFrontend =
+    normalizedHost.startsWith("localhost:") ||
+    normalizedHost === "localhost" ||
+    normalizedHost.startsWith("127.0.0.1:") ||
+    normalizedHost === "127.0.0.1";
+  const pointsToRemoteTestApi = /https?:\/\/apitest\.gotradego\.com\/?$/i.test(explicitRoot);
+
+  if (isLocalFrontend && pointsToRemoteTestApi) {
+    return "http://127.0.0.1:8081";
+  }
+
+  return explicitRoot;
 }
 
 export async function proxyJson({ path, method = "POST", body, forwardAuth = true }: ProxyOptions) {
-  const url = `${apiRoot()}${path.startsWith("/") ? "" : "/"}${path}`;
   const h = await headers();
+  const url = `${resolveApiRoot(h.get("host"))}${path.startsWith("/") ? "" : "/"}${path}`;
   const jar = await cookies();
   const inboundAuth = h.get("authorization");
   const cookieAccess = jar.get("gtg_access")?.value;
@@ -32,6 +42,7 @@ export async function proxyJson({ path, method = "POST", body, forwardAuth = tru
 
   const init: RequestInit = {
     method,
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...(authorization ? { Authorization: authorization } : {}),

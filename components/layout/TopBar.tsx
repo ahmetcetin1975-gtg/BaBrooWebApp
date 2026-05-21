@@ -26,7 +26,7 @@ export function TopBar({ titleLeft, lang, tabs, searchValue, onSearchChange, hid
   const t = getMessages(normalizeLang(lang));
 
   const left = tabs && tabs.length > 0 ? (
-    <div className="ml-14 flex items-center gap-2 lg:ml-0">
+    <div className="ml-14 flex min-w-0 flex-wrap items-center gap-2 lg:ml-0">
       {tabs.map((tab) => (
         <Link
           key={`${tab.href}-${tab.label}`}
@@ -43,14 +43,14 @@ export function TopBar({ titleLeft, lang, tabs, searchValue, onSearchChange, hid
       ))}
     </div>
   ) : (
-    <div className="flex items-center gap-2">{titleLeft}</div>
+    <div className="ml-14 flex items-center gap-2 lg:ml-0">{titleLeft}</div>
   );
 
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-gtg-border bg-white px-4 py-4 lg:px-7">
+    <div className="flex flex-col items-stretch gap-3 border-b border-gtg-border bg-white px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-7">
       {left}
       {hideSearch ? null : (
-        <div className="relative w-full max-w-[500px]">
+        <div className="relative w-full min-w-0 max-w-none lg:max-w-[500px]">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" />
           <input
             className="w-full rounded-xl border border-neutral-300 bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:ring-2 focus:ring-amber-200"

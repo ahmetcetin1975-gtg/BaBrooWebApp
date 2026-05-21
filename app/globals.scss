@@ -10,6 +10,7 @@
   --gtg-surface: #ffffff;
   --gtg-border: #e5e9ed;
   --gtg-muted: #8b959e;
+  --gtg-mobile-floating-actions-offset: calc(env(safe-area-inset-bottom, 0px) + 6.75rem);
 }
 
 body > .skiptranslate {
@@ -28,6 +29,10 @@ body {
   top: 0 !important;
 }
 
+body.jw-modal-open {
+  overflow: hidden;
+}
+
 .VIpgJd-ZVi9od-ORHb-OEVmcd {
   display: none !important;
   background-color: unset !important;
@@ -38,6 +43,26 @@ body {
   height: 0 !important;
   border-style: none;
   box-shadow: none;
+}
+
+@media (max-width: 767px) {
+  .gtg-home-mobile-spacer {
+    padding-bottom: var(--gtg-mobile-floating-actions-offset);
+  }
+
+  .gtg-modal-viewport {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  [role="dialog"][aria-modal="true"]:not([class*="fixed"]),
+  [role="alertdialog"][aria-modal="true"]:not([class*="fixed"]),
+  .gtg-mobile-modal-panel {
+    max-height: calc(100dvh - 2rem - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 

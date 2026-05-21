@@ -5,11 +5,11 @@ import { useTranslate } from "@/components/gtg/TranslationProvider";
 import { BaseAppConfig } from "@/lib/gtg/config";
 import { Packages } from "@/components/gtg/Packages";
 
-export function PackagesPage({ lang }: { lang: "tr" | "en" }) {
+export function PackagesPage({ lang }: { lang: string }) {
   const t = useTranslate();
   return (
     <>
-      <section className="relative table w-full py-36 bg-[url('/assets/images/gotradego/payment.png')] bg-center bg-no-repeat bg-cover">
+      <section className="relative table w-full py-36 bg-[url('/assets/images/babroo/payment.png')] bg-center bg-no-repeat bg-cover">
         <div className="absolute inset-0 bg-black opacity-75"></div>
         <div className="container relative">
           <div className="grid grid-cols-1 pb-8 text-center mt-10">

@@ -6,7 +6,7 @@ import { useTranslate } from "@/components/gtg/TranslationProvider";
 import { BaseAppConfig } from "@/lib/gtg/config";
 import { Subscription } from "@/components/gtg/Subscription";
 
-export function FaqPage({ lang }: { lang: "tr" | "en" }) {
+export function FaqPage({ lang }: { lang: string }) {
   const t = useTranslate();
   const faqTab1 = [
     { id: 1, title: "LCOD_LBL_TAB1_QUEST_1", desc: "LCOD_LBL_TAB1_ANSWER_1" },

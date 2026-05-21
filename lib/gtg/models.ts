@@ -1,6 +1,16 @@
-﻿export type ApiResponse<T = unknown> = {
+export type ApiResponse<T = unknown> = {
   StatusCode: number;
+  Message?: string;
+  Meta?: unknown;
   Data: T;
+};
+
+export type CareCategory = {
+  id: number;
+  slug: string;
+  title: string;
+  detail: string;
+  imageUrl?: string;
 };
 
 export type BlogModel = {
@@ -49,6 +59,10 @@ export type PricesModel = {
   Prices1?: number;
   Prices2?: number;
   Prices3?: number;
+  PaketAdi?: string;
+  Fiyat1?: number;
+  Fiyat2?: number;
+  DemoPaket?: string;
 };
 
 export type InvoiceInformationModel = {
@@ -67,5 +81,3 @@ export type BankAccountModel = {
   IbanUSD: string;
   IbanEUR: string;
 };
-
-

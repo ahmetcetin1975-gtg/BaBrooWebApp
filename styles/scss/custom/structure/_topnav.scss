@@ -328,7 +328,7 @@
 @media (min-width: 1300px) {
   #topnav {
     .navigation-menu {
-      @apply flex flex-wrap justify-center;
+      @apply flex flex-nowrap justify-center;
 
       &.justify-end {
         li {
@@ -361,6 +361,8 @@
         }
       }
       > li {
+        @apply shrink-0;
+
         .submenu {
           transition: all 0.2s ease;
           @apply absolute top-full start-0 z-[1000] py-[15px] px-0 list-none min-w-[180px] invisible opacity-0 mt-[10px] rounded-md bg-white dark:bg-slate-900 shadow dark:shadow-gray-800;
@@ -394,7 +396,7 @@
         }
         > a,
         > button {
-          @apply py-[25px] min-h-[62px];
+          @apply py-[25px] min-h-[62px] whitespace-nowrap;
         }
         &:hover {
           > .menu-arrow {
@@ -490,6 +492,7 @@
   #topnav {
     @apply bg-white dark:bg-slate-900 shadow dark:shadow-gray-800 min-h-[74px];
     .logo {
+      @apply leading-[74px] ps-1;
       .l-dark {
         @apply inline-block ;
       }
@@ -501,18 +504,22 @@
       @apply w-auto;
     }
     #navigation {
-      @apply max-h-[400px] shadow;
+      @apply shadow-none border-t border-slate-200/80 dark:border-slate-700/80;
+      max-height: calc(100dvh - 74px);
     }
     .navigation-menu {
-      @apply float-none ;
+      @apply float-none py-2 ;
       > li {
-        @apply float-none ;
+        @apply float-none mx-0 border-b border-slate-100 dark:border-slate-800;
+        &:last-child {
+          @apply border-b-0;
+        }
         .submenu {
-          @apply hidden list-none ps-5 m-0;
+          @apply hidden list-none ps-0 pb-2 m-0;
           li {
             a {
               transition: all 0.3s;
-              @apply block relative py-[7px] px-[15px] uppercase text-[11px] tracking-[0.04em] font-bold text-black dark:text-white ;
+              @apply block relative py-[8px] px-8 uppercase text-[12px] tracking-[0.08em] font-bold text-slate-500 dark:text-slate-300 ;
             }
           }
           &.megamenu {
@@ -542,12 +549,20 @@
             }
           }
         }
-        > a {
-          @apply text-black dark:text-white py-[10px] px-[20px] after:absolute after:end-[15px];
+        > a,
+        > button {
+          @apply block w-full bg-transparent text-left text-blue-700 py-[15px] px-6 uppercase text-[15px] tracking-[0.08em] font-bold border-0;
+        }
+        > button {
+          @apply pe-14;
         }
         > a:hover,
+        > button:hover,
         .submenu li a:hover,
-        &.has-submenu.open > a {
+        &.active > a,
+        &.active > button,
+        &.has-submenu.open > a,
+        &.has-submenu.open > button {
           @apply text-blue-700;
         }
       }
@@ -572,6 +587,12 @@
       }
     }
     .has-submenu {
+      &.open,
+      &.active {
+        > .menu-arrow {
+          @apply border-blue-700 rotate-[225deg];
+        }
+      }
       .submenu {
         .submenu-arrow {
           @apply rotate-[45deg] absolute end-5 top-3;
@@ -581,6 +602,9 @@
         a {
           @apply text-blue-700;
         }
+      }
+      .menu-arrow {
+        @apply end-6 top-[22px] border-slate-500;
       }
     }
   }
@@ -593,15 +617,50 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (min-width: 1300px) and (max-width: 1439px) {
   #topnav {
     .navigation-menu {
-      .has-submenu {
-        .menu-arrow {
-          @apply end-2 top-4;
+      > li {
+        @apply mx-[5px];
+
+        > a,
+        > button {
+          @apply px-[9px] text-[12px];
         }
       }
     }
+
+    .buy-button {
+      @apply ps-[10px] ms-[10px];
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  #topnav {
+    @apply min-h-[72px];
+    .logo {
+      @apply leading-[72px] ps-0;
+    }
+    .navbar-toggle {
+      .lines {
+        @apply mt-[27px] mb-[21px] ms-[6px];
+      }
+    }
+    .buy-button {
+      @apply pe-4 leading-[72px];
+    }
+    .navigation-menu {
+      .has-submenu {
+        .menu-arrow {
+          @apply end-6 top-[22px];
+        }
+      }
+    }
+  }
+
+  #navigation {
+    @apply top-[72px];
   }
 }
 
@@ -695,5 +754,75 @@
         }
       }
     }
+}
+
+#topnav.navy-surface,
+#topnav.navy-surface.nav-sticky,
+#topnav.navy-surface.scroll {
+  @apply bg-white shadow;
+
+  .logo {
+    @apply text-slate-900;
+  }
+
+  .navigation-menu {
+    > li {
+      > a,
+      > button {
+        @apply text-slate-900;
+      }
+
+      &:hover,
+      &.active {
+        > a,
+        > button {
+          @apply text-blue-700;
+        }
+      }
+    }
+
+    &.nav-light {
+      > li {
+        > a,
+        > button {
+          @apply text-slate-900;
+        }
+
+        &.active,
+        &:hover {
+          > a,
+          > button {
+            @apply text-blue-700;
+          }
+        }
+      }
+
+      .has-submenu {
+        .menu-arrow {
+          @apply border-slate-900;
+        }
+
+        &.active,
+        &:hover {
+          .menu-arrow {
+            @apply border-blue-700;
+          }
+        }
+      }
+    }
+  }
+
+  .navbar-toggle {
+    span {
+      @apply bg-slate-900;
+    }
+  }
+
+  .has-submenu {
+    .menu-arrow,
+    .submenu .submenu-arrow {
+      @apply border-slate-900;
+    }
+  }
 }
 

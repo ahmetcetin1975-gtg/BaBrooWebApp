@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import clsx from "clsx";
 import { api } from "@/lib/api/client";
-import { normalizeLang } from "@/lib/i18n/languages";
+import { langToDil, normalizeLang, type Lang } from "@/lib/i18n/languages";
 
 type CustomerData = {
   MusteriEmail?: string;
@@ -35,11 +35,136 @@ function validateSupportMessage(value: string): "required" | "min" | "max" | nul
   return null;
 }
 
+const SUPPORT_TEXT: Record<
+  Lang,
+  {
+    pageTitle: string;
+    breadcrumbParent: string;
+    contactTitle: string;
+    contactDesc: string;
+    loading: string;
+    loadError: string;
+    sendError: string;
+    noData: string;
+    email: string;
+    contactMessageLabel: string;
+    contactSend: string;
+    contactSending: string;
+    contactSendOk: string;
+    supportNo: string;
+    contactEmailMissing: string;
+    contactMessageRequired: string;
+    contactMessageMin: string;
+    contactMessageMax: string;
+  }
+> = {
+  tr: {
+    pageTitle: "Destek",
+    breadcrumbParent: "Diğer",
+    contactTitle: "İletişim",
+    contactDesc: "Destek talebinizi aşağıdaki form ile iletebilirsiniz.",
+    loading: "Yükleniyor...",
+    loadError: "Hesap bilgileri yüklenemedi.",
+    sendError: "Destek mesajı gönderilemedi.",
+    noData: "Hesap bilgisi bulunamadı.",
+    email: "E-posta Adresi",
+    contactMessageLabel: "Mesajınız",
+    contactSend: "Mesaj Gönder",
+    contactSending: "Gönderiliyor...",
+    contactSendOk: "Mesajınız gönderildi.",
+    supportNo: "Destek No",
+    contactEmailMissing: "Giriş yapan kullanıcı e-postası bulunamadı.",
+    contactMessageRequired: "Mesaj boş olamaz.",
+    contactMessageMin: "Mesaj en az 3 karakter olmalıdır.",
+    contactMessageMax: "Mesaj en fazla 255 karakter olabilir.",
+  },
+  en: {
+    pageTitle: "Support",
+    breadcrumbParent: "Other",
+    contactTitle: "Contact Us",
+    contactDesc: "Send your support request using the form below.",
+    loading: "Loading...",
+    loadError: "Failed to load account details.",
+    sendError: "Failed to send support message.",
+    noData: "No account information found.",
+    email: "Email Address",
+    contactMessageLabel: "Your Message",
+    contactSend: "Send Message",
+    contactSending: "Sending...",
+    contactSendOk: "Your message has been sent.",
+    supportNo: "Support No",
+    contactEmailMissing: "Logged in user email is not available.",
+    contactMessageRequired: "Message is required.",
+    contactMessageMin: "Message must be at least 3 characters.",
+    contactMessageMax: "Message must be at most 255 characters.",
+  },
+  ru: {
+    pageTitle: "Поддержка",
+    breadcrumbParent: "Другое",
+    contactTitle: "Связаться с нами",
+    contactDesc: "Отправьте запрос в поддержку через форму ниже.",
+    loading: "Загрузка...",
+    loadError: "Не удалось загрузить данные аккаунта.",
+    sendError: "Не удалось отправить сообщение в поддержку.",
+    noData: "Информация об аккаунте не найдена.",
+    email: "Адрес e-mail",
+    contactMessageLabel: "Ваше сообщение",
+    contactSend: "Отправить сообщение",
+    contactSending: "Отправка...",
+    contactSendOk: "Ваше сообщение отправлено.",
+    supportNo: "Номер обращения",
+    contactEmailMissing: "E-mail вошедшего пользователя недоступен.",
+    contactMessageRequired: "Сообщение обязательно.",
+    contactMessageMin: "Сообщение должно содержать минимум 3 символа.",
+    contactMessageMax: "Сообщение может содержать не более 255 символов.",
+  },
+  es: {
+    pageTitle: "Soporte",
+    breadcrumbParent: "Otro",
+    contactTitle: "Contáctanos",
+    contactDesc: "Envía tu solicitud de soporte usando el formulario de abajo.",
+    loading: "Cargando...",
+    loadError: "No se pudieron cargar los datos de la cuenta.",
+    sendError: "No se pudo enviar el mensaje de soporte.",
+    noData: "No se encontró información de la cuenta.",
+    email: "Correo electrónico",
+    contactMessageLabel: "Tu mensaje",
+    contactSend: "Enviar mensaje",
+    contactSending: "Enviando...",
+    contactSendOk: "Tu mensaje ha sido enviado.",
+    supportNo: "N.º de soporte",
+    contactEmailMissing: "El correo del usuario conectado no está disponible.",
+    contactMessageRequired: "El mensaje es obligatorio.",
+    contactMessageMin: "El mensaje debe tener al menos 3 caracteres.",
+    contactMessageMax: "El mensaje debe tener como máximo 255 caracteres.",
+  },
+  fr: {
+    pageTitle: "Support",
+    breadcrumbParent: "Autre",
+    contactTitle: "Nous contacter",
+    contactDesc: "Envoyez votre demande de support avec le formulaire ci-dessous.",
+    loading: "Chargement...",
+    loadError: "Impossible de charger les informations du compte.",
+    sendError: "Impossible d'envoyer le message au support.",
+    noData: "Aucune information de compte trouvée.",
+    email: "Adresse e-mail",
+    contactMessageLabel: "Votre message",
+    contactSend: "Envoyer le message",
+    contactSending: "Envoi...",
+    contactSendOk: "Votre message a été envoyé.",
+    supportNo: "N° de support",
+    contactEmailMissing: "L'e-mail de l'utilisateur connecté n'est pas disponible.",
+    contactMessageRequired: "Le message est obligatoire.",
+    contactMessageMin: "Le message doit contenir au moins 3 caractères.",
+    contactMessageMax: "Le message doit contenir au maximum 255 caractères.",
+  },
+};
+
 export default function SupportPage() {
   const params = useParams<{ lang?: string | string[] }>();
   const rawLang = Array.isArray(params?.lang) ? params.lang[0] : params?.lang;
   const lang = normalizeLang(rawLang ?? "tr");
-  const dil = lang === "tr" ? 1 : 2;
+  const dil = langToDil(lang);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,47 +175,7 @@ export default function SupportPage() {
   const [contactError, setContactError] = useState<string | null>(null);
   const [contactSuccess, setContactSuccess] = useState<string | null>(null);
 
-  const text = useMemo(
-    () =>
-      lang === "tr"
-        ? {
-            pageTitle: "Destek",
-            breadcrumbParent: "Diğer",
-            contactTitle: "İletişim",
-            contactDesc: "Destek talebinizi aşağıdaki form ile iletebilirsiniz.",
-            loading: "Yükleniyor...",
-            noData: "Hesap bilgisi bulunamadı.",
-            email: "E-posta Adresi",
-            contactMessageLabel: "Mesajınız",
-            contactSend: "Mesaj Gönder",
-            contactSending: "Gönderiliyor...",
-            contactSendOk: "Mesajınız gönderildi.",
-            supportNo: "Destek No",
-            contactEmailMissing: "Giriş yapan kullanıcı e-postası bulunamadı.",
-            contactMessageRequired: "Mesaj boş olamaz.",
-            contactMessageMin: "Mesaj en az 3 karakter olmalıdır.",
-            contactMessageMax: "Mesaj en fazla 255 karakter olabilir.",
-          }
-        : {
-            pageTitle: "Support",
-            breadcrumbParent: "Other",
-            contactTitle: "Contact Us",
-            contactDesc: "Send your support request using the form below.",
-            loading: "Loading...",
-            noData: "No account information found.",
-            email: "Email Address",
-            contactMessageLabel: "Your Message",
-            contactSend: "Send Message",
-            contactSending: "Sending...",
-            contactSendOk: "Your message has been sent.",
-            supportNo: "Support No",
-            contactEmailMissing: "Logged in user email is not available.",
-            contactMessageRequired: "Message is required.",
-            contactMessageMin: "Message must be at least 3 characters.",
-            contactMessageMax: "Message must be at most 255 characters.",
-          },
-    [lang]
-  );
+  const text = useMemo(() => SUPPORT_TEXT[lang], [lang]);
 
   useEffect(() => {
     let cancelled = false;
@@ -104,7 +189,7 @@ export default function SupportPage() {
         setCustomer(data?.Data ?? null);
       } catch (err: any) {
         if (cancelled) return;
-        setError(String(err?.message ?? "Failed to load account details"));
+        setError(String(err?.message ?? text.loadError));
         setCustomer(null);
       } finally {
         if (!cancelled) setLoading(false);
@@ -114,7 +199,7 @@ export default function SupportPage() {
     return () => {
       cancelled = true;
     };
-  }, [dil]);
+  }, [dil, text.loadError]);
 
   const plainInputClass =
     "w-full rounded-xl border border-[#cfd4de] bg-[#f7f7f9] px-4 py-3 text-[15px] text-[#1f2937] outline-none";
@@ -167,7 +252,7 @@ export default function SupportPage() {
           : text.contactSendOk
       );
     } catch (err: any) {
-      setContactError(String(err?.message ?? "Failed to send support message"));
+      setContactError(String(err?.message ?? text.sendError));
     } finally {
       setContactSending(false);
     }

@@ -9,15 +9,26 @@ async function safeJson(res: Response) {
   }
 }
 
+function readApiMessage(data: any, res: Response): string {
+  return String(
+    data?.Message ??
+      data?.message ??
+      data?.error ??
+      data?.raw ??
+      (res.status ? `HTTP ${res.status} ${res.statusText}` : "Request failed")
+  );
+}
+
 async function request<T>(
   input: RequestInfo | URL,
   init: RequestInit & { retry?: boolean } = {}
 ): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
   const res = await fetch(input, {
     ...init,
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(init.headers || {}),
     },
   });
@@ -31,16 +42,25 @@ async function request<T>(
     });
 
     if (rr.ok) {
+      const retryIsFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
       const res2 = await fetch(input, {
         ...init,
         retry: false,
         credentials: "include",
         headers: {
-          "Content-Type": "application/json",
+          ...(retryIsFormData ? {} : { "Content-Type": "application/json" }),
           ...(init.headers || {}),
         },
       } as any);
-      if (!res2.ok) throw await safeJson(res2);
+      if (!res2.ok) {
+        const data = await safeJson(res2);
+        throw {
+          message: readApiMessage(data, res2),
+          status: res2.status,
+          statusText: res2.statusText,
+          ...data,
+        };
+      }
       return (await res2.json()) as T;
     }
   }
@@ -48,10 +68,7 @@ async function request<T>(
   if (!res.ok) {
     const data = await safeJson(res);
     throw {
-      message:
-        data?.message ??
-        data?.error ??
-        (res.status ? `HTTP ${res.status} ${res.statusText}` : "Request failed"),
+      message: readApiMessage(data, res),
       status: res.status,
       statusText: res.statusText,
       ...data,
@@ -64,4 +81,6 @@ export const api = {
   get: <T>(url: string) => request<T>(url, { method: "GET" }),
   post: <T = any>(url: string, body?: Json) =>
     request<T>(url, { method: "POST", body: JSON.stringify(body ?? {}) }),
+  postForm: <T = any>(url: string, body: FormData) =>
+    request<T>(url, { method: "POST", body }),
 };

@@ -5,7 +5,7 @@ import { useTranslate } from "@/components/gtg/TranslationProvider";
 import { BaseAppConfig } from "@/lib/gtg/config";
 import { Subscription } from "@/components/gtg/Subscription";
 
-export function ContactPage({ lang }: { lang: "tr" | "en" }) {
+export function ContactPage({ lang }: { lang: string }) {
   const t = useTranslate();
   const aboutData = [
     {
@@ -20,9 +20,9 @@ export function ContactPage({ lang }: { lang: "tr" | "en" }) {
       type: "mail",
       icon: "uil uil-envelope",
       title: "LCOD_LBL_EMAIL",
-      link1: "mailto:info@gotradego.com",
-      name1: "info@gotradego.com",
-      name2: "info@gotradego.com",
+      link1: "mailto:info@babroo.com",
+      name1: "info@babroo.com",
+      name2: "info@babroo.com",
     },
     {
       type: "map",

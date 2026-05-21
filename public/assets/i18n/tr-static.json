@@ -41,7 +41,7 @@
   "LCOD_LBL_BASIC_PACKET_ADVANTAGES": "Bütün BASIC Paket Avantajları",
   "LCOD_LBL_ADVANTAGES_PACKET_ADVANTAGES": "Bütün ADVANTAGES Paket Avantajları",
   "LCOD_LBL_WHAT_SAY_USER": "Kullanıcılar Ne Diyor ?",
-  "LCOD_LBL_USER_SAYS_BANNER": "Farkındalık yaratmak, trafik çekmek ve bağlantı kurmak için ihtiyacınız olan her şeyi sağlayabilen GoTradeGo ile çalışmaya başlayın.",
+  "LCOD_LBL_USER_SAYS_BANNER": "Farkındalık yaratmak, trafik çekmek ve bağlantı kurmak için ihtiyacınız olan her şeyi sağlayabilen Babroo ile çalışmaya başlayın.",
   "LCOD_LBL_TESTIMONIALS": "Referanslar",
   "LCOD_LBL_LOOKING_FOR_HELP": "Yardıma mı ihtiyacınız var?",
   "LCOD_LBL_GET_IN_TOUCH": "Bizimle iletişime geçin",
@@ -58,9 +58,9 @@
   "LCOD_LBL_UPLOAD_PRODUCT_FREE_BAR_TEXT_2": "İnşaat, Gıda, Makine",
   "LCOD_LBL_UPLOAD_PRODUCT_FREE_BAR_TEXT_3": "Elektronik, Hizmet",
   "LCOD_LBL_UPLOAD_PRODUCT_FREE_BAR_TEXT_4": "Diğer",
-  "LCOD_LBL_UPLOAD_PRODUCT_FREE_SUBTEXT": "GoTradeGo sayesinde pazarlamak istediğiniz ürünleri veya taleplerinizi platforma ücretsiz olarak yükleyebilir, geniş bir ithalatçı ve ihracatçı kitlesine zahmetsizce ulaşabilirsiniz. ",
+  "LCOD_LBL_UPLOAD_PRODUCT_FREE_SUBTEXT": "Babroo sayesinde pazarlamak istediğiniz ürünleri veya taleplerinizi platforma ücretsiz olarak yükleyebilir, geniş bir ithalatçı ve ihracatçı kitlesine zahmetsizce ulaşabilirsiniz. ",
   "LCOD_LBL_SERVICES_ARE_HERE": "Dış Ticarette Aradığınız Hizmetler <span class='text-[#FF7601]'>Bir Arada</span>",
-  "LCOD_LBL_SERVICES_ARE_HERE_SUBTEXT": "GoTradeGo ile dış ticaretin farklı alanlarında ihtiyaç duyduğunuz tüm uzmanlıkları tek bir platformda bulabilirsiniz.",
+  "LCOD_LBL_SERVICES_ARE_HERE_SUBTEXT": "Babroo ile dış ticaretin farklı alanlarında ihtiyaç duyduğunuz tüm uzmanlıkları tek bir platformda bulabilirsiniz.",
   "LCOD_LBL_SERVICE_ARE_HERE_BAR_TEXT_1": "Dış Ticaret Uzmanı",
   "LCOD_LBL_SERVICE_ARE_HERE_BAR_TEXT_2": "Operasyon Sorumlusu",
   "LCOD_LBL_SERVICE_ARE_HERE_BAR_TEXT_3": "Gümrük Müşaviri",
@@ -92,7 +92,7 @@
   "LCOD_LBL_PHONE": "Telefon",
   "LCOD_LBL_ADDRESS": "Adres",
   "LCOD_LBL_IMPORT_EXPORT": "İthalat/İhracat",
-  "LCOD_LBL_DO_IT_EXPORT_WITH_US": "GoTradeGo İle Kolayca Global Pazarlara Açıl ve Ticaret Yap!",
+  "LCOD_LBL_DO_IT_EXPORT_WITH_US": "Babroo İle Kolayca Global Pazarlara Açıl ve Ticaret Yap!",
   "LCOD_LBL_WHO_ARE_WE_INNER": "Biz <br> Kimiz ?",
   "LCOD_LBL_NOT_INCLUDED_TAXED": "Fiyatlarımıza KDV Dahil Değildir.",
   "LCOD_LBL_FTS_HOW_TO_WORK": "",
@@ -138,5 +138,5 @@
   "Represent our brand in your region and grow your network.": "Markamızı bölgenizde temsil edin ve ağınızı genişletin.",
   "LCOD_LBL_FOR_IMPORT_EXPORT_PAGE_TOP_BANNER": "İthalat/İhracat Yapmak İsteyenler İçin",
   "LCOD_LBL_FTS_TOP_BANNER": "Uzmanlığınızı Paylaşın, Yeni İş Fırsatlarını Yakalayın!",
-  "LCOD_LBL_DO_YOU_WANT_NEW_JOB": "GoTradeGo ile Dünya Çağında Yeni İş Fırsatlarına Kapı Aralamak İster Misiniz?"
+  "LCOD_LBL_DO_YOU_WANT_NEW_JOB": "Babroo ile Dünya Çağında Yeni İş Fırsatlarına Kapı Aralamak İster Misiniz?"
 }

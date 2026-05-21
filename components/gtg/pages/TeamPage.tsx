@@ -6,7 +6,7 @@ import { BaseAppConfig } from "@/lib/gtg/config";
 import { TeamServiceProviders } from "@/components/gtg/TeamServiceProviders";
 import { Subscription } from "@/components/gtg/Subscription";
 
-export function TeamPage({ lang }: { lang: "tr" | "en" }) {
+export function TeamPage({ lang }: { lang: string }) {
   const t = useTranslate();
 
   return (

@@ -13,7 +13,7 @@ export default async function Page({ params }: { params: Promise<{ lang: string 
 
   return (
     <div>
-      <section className="relative table w-full py-36 bg-[url('/assets/images/gotradego/kvkk-2.png')] bg-center bg-no-repeat bg-cover">
+      <section className="relative table w-full py-36 bg-[url('/assets/images/babroo/kvkk-2.png')] bg-center bg-no-repeat bg-cover">
         <div className="absolute inset-0 bg-black opacity-80"></div>
         <div className="container relative">
           <div className="grid grid-cols-1 pb-8 text-center mt-10">

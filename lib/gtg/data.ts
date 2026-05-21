@@ -20,21 +20,21 @@ export function getIndexSlider(): SwiperItem[] {
       Title: "LCOD_TEXT_SLIDER_INDEX_TEXT1",
       Description: "LCOD_TEXT_SLIDER_INDEX_DESC1",
       ButtonTitle: "LCOD_TEXT_SLIDER_INDEX_BUTTON1",
-      ImagePath: "/assets/images/gotradego/connect-world.jpg",
+      ImagePath: "/assets/images/babroo/connect-world.jpg",
     },
     {
       Id: 2,
       Title: "LCOD_TEXT_SLIDER_INDEX_TEXT2",
       Description: "LCOD_TEXT_SLIDER_INDEX_DESC2",
       ButtonTitle: "LCOD_TEXT_SLIDER_INDEX_BUTTON2",
-      ImagePath: "/assets/images/gotradego/product-spotlight.jpg",
+      ImagePath: "/assets/images/babroo/product-spotlight.jpg",
     },
     {
       Id: 3,
       Title: "LCOD_TEXT_SLIDER_INDEX_TEXT3",
       Description: "LCOD_TEXT_SLIDER_INDEX_DESC3",
       ButtonTitle: "LCOD_TEXT_SLIDER_INDEX_BUTTON3",
-      ImagePath: "/assets/images/gotradego/success.png",
+      ImagePath: "/assets/images/babroo/success.png",
     },
   ];
 }
@@ -111,53 +111,53 @@ export function getAdvantagesData(): ServicesItem[] {
 
 export function getProductImages(): string[] {
   return [
-    "/assets/images/gotradego/index/fur4.jpg",
-    "/assets/images/gotradego/index/patates.png",
-    "/assets/images/gotradego/index/auto2.jpg",
-    "/assets/images/gotradego/index/bulgur.jpg",
-    "/assets/images/gotradego/index/machine2.jpg",
-    "/assets/images/gotradego/index/yesil-mercimek.jpg",
-    "/assets/images/gotradego/index/textile3.jpg",
-    "/assets/images/gotradego/index/elec4.jpg",
-    "/assets/images/gotradego/index/fur6.jpg",
-    "/assets/images/gotradego/index/fur1.jpg",
-    "/assets/images/gotradego/index/badem.png",
-    "/assets/images/gotradego/index/zeytinyagi.png",
-    "/assets/images/gotradego/index/auto4.jpg",
-    "/assets/images/gotradego/index/kaju.jpg",
-    "/assets/images/gotradego/index/elec3.jpg",
-    "/assets/images/gotradego/index/textile1.jpg",
-    "/assets/images/gotradego/index/auto3.jpg",
-    "/assets/images/gotradego/index/elec1.jpg",
-    "/assets/images/gotradego/index/fur2.jpg",
-    "/assets/images/gotradego/index/fur8.jpg",
-    "/assets/images/gotradego/index/textile2.jpg",
-    "/assets/images/gotradego/index/kirmizi-mercimek.jpg",
-    "/assets/images/gotradego/index/tuzlu-fistik.png",
-    "/assets/images/gotradego/index/machine1.jpg",
-    "/assets/images/gotradego/index/elec2.jpg",
-    "/assets/images/gotradego/index/textile5.jpg",
-    "/assets/images/gotradego/index/fur5.jpg",
-    "/assets/images/gotradego/index/service1.jpg",
-    "/assets/images/gotradego/index/pirinc.png",
-    "/assets/images/gotradego/index/fur3.jpg",
-    "/assets/images/gotradego/index/auto1.jpg",
-    "/assets/images/gotradego/index/misir.jpg",
-    "/assets/images/gotradego/index/fur7.jpg",
-    "/assets/images/gotradego/index/textile4.jpg",
+    "/assets/images/babroo/index/fur4.jpg",
+    "/assets/images/babroo/index/patates.png",
+    "/assets/images/babroo/index/auto2.jpg",
+    "/assets/images/babroo/index/bulgur.jpg",
+    "/assets/images/babroo/index/machine2.jpg",
+    "/assets/images/babroo/index/yesil-mercimek.jpg",
+    "/assets/images/babroo/index/textile3.jpg",
+    "/assets/images/babroo/index/elec4.jpg",
+    "/assets/images/babroo/index/fur6.jpg",
+    "/assets/images/babroo/index/fur1.jpg",
+    "/assets/images/babroo/index/badem.png",
+    "/assets/images/babroo/index/zeytinyagi.png",
+    "/assets/images/babroo/index/auto4.jpg",
+    "/assets/images/babroo/index/kaju.jpg",
+    "/assets/images/babroo/index/elec3.jpg",
+    "/assets/images/babroo/index/textile1.jpg",
+    "/assets/images/babroo/index/auto3.jpg",
+    "/assets/images/babroo/index/elec1.jpg",
+    "/assets/images/babroo/index/fur2.jpg",
+    "/assets/images/babroo/index/fur8.jpg",
+    "/assets/images/babroo/index/textile2.jpg",
+    "/assets/images/babroo/index/kirmizi-mercimek.jpg",
+    "/assets/images/babroo/index/tuzlu-fistik.png",
+    "/assets/images/babroo/index/machine1.jpg",
+    "/assets/images/babroo/index/elec2.jpg",
+    "/assets/images/babroo/index/textile5.jpg",
+    "/assets/images/babroo/index/fur5.jpg",
+    "/assets/images/babroo/index/service1.jpg",
+    "/assets/images/babroo/index/pirinc.png",
+    "/assets/images/babroo/index/fur3.jpg",
+    "/assets/images/babroo/index/auto1.jpg",
+    "/assets/images/babroo/index/misir.jpg",
+    "/assets/images/babroo/index/fur7.jpg",
+    "/assets/images/babroo/index/textile4.jpg",
   ];
 }
 
 export function getPersonImages(): string[] {
   return [
-    "/assets/images/gotradego/services/fts1.jpeg",
-    "/assets/images/gotradego/services/services3.jpg",
-    "/assets/images/gotradego/services/fts2.jpg",
-    "/assets/images/gotradego/services/services4.jpg",
-    "/assets/images/gotradego/services/op1.jpg",
-    "/assets/images/gotradego/services/services1.jpg",
-    "/assets/images/gotradego/services/fts3.jpg",
-    "/assets/images/gotradego/services/services2.jpg",
+    "/assets/images/babroo/services/fts1.jpeg",
+    "/assets/images/babroo/services/services3.jpg",
+    "/assets/images/babroo/services/fts2.jpg",
+    "/assets/images/babroo/services/services4.jpg",
+    "/assets/images/babroo/services/op1.jpg",
+    "/assets/images/babroo/services/services1.jpg",
+    "/assets/images/babroo/services/fts3.jpg",
+    "/assets/images/babroo/services/services2.jpg",
   ];
 }
 
@@ -215,26 +215,64 @@ export function getPersonData(): { title: string; value: number }[] {
     { title: "LCOD_LBL_SERVICE_ARE_HERE_BAR_TEXT_5", value: 10 },
   ];
 }
-
-export function getRegisterData(): { icon: string; title: string; href: string }[] {
+{/*export function getRegisterData(lang: string) {
   return [
     {
       icon: "uil uil-export",
       title: "LCOD_LBL_DO_EXPORT",
-      href: "https://app.gotradego.com/app.gotradego/seller/auth-register-seller.asp",
+      href: `/${lang}/register`,
     },
     {
       icon: "uil uil-import",
       title: "LCOD_LBL_DO_IMPORT",
-      href: "https://app.gotradego.com/app.gotradego/buyer/auth-register-seller.asp",
+      href: `/${lang}/register`,
     },
     {
       icon: "uil uil-users-alt",
       title: "LCOD_LBL_BE_AN_EXPERT",
-      href: "https://app.gotradego.com/app.gotradego/expert/auth-register-seller.asp",
+      href: `/${lang}/register`,
+    },
+  ];
+}*/}
+
+export function getRegisterData(lang: string): { icon: string; title: string; href: string }[] {
+  return [
+    {
+      icon: "uil uil-export",
+      title: "LCOD_LBL_DO_EXPORT",
+      href: `/${lang}/register`,
+    },
+    {
+      icon: "uil uil-import",
+      title: "LCOD_LBL_DO_IMPORT",
+      href: `/${lang}/register`,
+    },
+    {
+      icon: "uil uil-users-alt",
+      title: "LCOD_LBL_BE_AN_EXPERT",
+      href: `/${lang}/register`,
     },
   ];
 }
+{/*export function getRegisterData(): { icon: string; title: string; href: string }[] {
+  return [
+    {
+      icon: "uil uil-export",
+      title: "LCOD_LBL_DO_EXPORT",
+      href: "https://app.babroo.com/app.babroo/seller/auth-register-seller.asp",
+    },
+    {
+      icon: "uil uil-import",
+      title: "LCOD_LBL_DO_IMPORT",
+      href: "https://app.babroo.com/app.babroo/buyer/auth-register-seller.asp",
+    },
+    {
+      icon: "uil uil-users-alt",
+      title: "LCOD_LBL_BE_AN_EXPERT",
+      href: "https://app.babroo.com/app.babroo/expert/auth-register-seller.asp",
+    },
+  ];
+}*/}
 
 export function getCounterData(): { target: number; title: string }[] {
   return [

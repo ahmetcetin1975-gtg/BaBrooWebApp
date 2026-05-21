@@ -5,16 +5,18 @@ import { useParams } from "next/navigation";
 import {
   Bot,
   CircleEllipsis,
-  Paperclip,
   Search,
   SendHorizontal,
-  SlidersHorizontal,
-  Smile,
   Sparkles,
 } from "lucide-react";
-import { normalizeLang } from "@/lib/i18n/languages";
+import { OfferFlowModal, type OfferModalMode } from "@/components/offers/OfferFlowModal";
+import { langToDil, localeForLang, normalizeLang, type Lang } from "@/lib/i18n/languages";
 import { api } from "@/lib/api/client";
-import { CUSTOMER_UPDATED_EVENT, type CustomerUpdatedDetail } from "@/lib/customer/events";
+import {
+  CUSTOMER_UPDATED_EVENT,
+  OPEN_COIN_PURCHASE_EVENT,
+  type CustomerUpdatedDetail,
+} from "@/lib/customer/events";
 
 type ConversationItem = {
   id: number;
@@ -66,10 +68,155 @@ type AiSendResponse = {
   } | null;
 };
 
+type AiFeeResponse = {
+  StatusCode?: number;
+  Message?: string;
+  Data?: {
+    MesajUcreti?: number;
+  } | null;
+};
+
 type ChatMessage = {
   id: string;
   role: "bot" | "user";
   text: string;
+};
+
+const AI_TEXT: Record<
+  Lang,
+  {
+    title: string;
+    messages: string;
+    totalCountLabel: string;
+    search: string;
+    loading: string;
+    loadingMore: string;
+    empty: string;
+    upgrade: string;
+    placeholder: string;
+    today: string;
+    yesterday: string;
+    unknownDate: string;
+    loadError: string;
+    loadMoreError: string;
+    feeLoadError: string;
+    thinking: string;
+    noReply: string;
+    sendError: string;
+    sendCouldNot: string;
+    sent: string;
+  }
+> = {
+  tr: {
+    title: "Yapay Zeka Mesajları",
+    messages: "Yapay Zeka Mesajları",
+    totalCountLabel: "Toplam Kayıt Sayısı",
+    search: "Ara...",
+    loading: "Yükleniyor...",
+    loadingMore: "Daha fazla yükleniyor...",
+    empty: "Mesaj bulunamadı.",
+    upgrade: "Pro Gemini AI BOT'a yükselt",
+    placeholder: "Mesajınızı yazın...",
+    today: "Bugün",
+    yesterday: "Dün",
+    unknownDate: "Tarih bilinmiyor",
+    loadError: "AI mesajları yüklenemedi.",
+    loadMoreError: "Daha fazla AI mesajı yüklenemedi.",
+    feeLoadError: "Coin ücreti yüklenemedi.",
+    thinking: "Gemini AI yanıtı hazırlanıyor...",
+    noReply: "AI cevabı henüz alınamadı.",
+    sendError: "Mesaj gönderimi başarısız.",
+    sendCouldNot: "Mesaj gönderilemedi.",
+    sent: "AI mesaj gönderildi.",
+  },
+  en: {
+    title: "AI Messages",
+    messages: "AI Messages",
+    totalCountLabel: "Total Record Count",
+    search: "Search...",
+    loading: "Loading...",
+    loadingMore: "Loading more...",
+    empty: "No messages found.",
+    upgrade: "Upgrade to Pro Gemini AI BOT",
+    placeholder: "Type your message...",
+    today: "Today",
+    yesterday: "Yesterday",
+    unknownDate: "Unknown date",
+    loadError: "Failed to load AI messages.",
+    loadMoreError: "Failed to load more AI messages.",
+    feeLoadError: "The coin fee could not be loaded.",
+    thinking: "Gemini AI response is being prepared...",
+    noReply: "AI response has not been received yet.",
+    sendError: "Failed to send message.",
+    sendCouldNot: "Message could not be sent.",
+    sent: "AI message sent.",
+  },
+  ru: {
+    title: "Сообщения ИИ",
+    messages: "Сообщения ИИ",
+    totalCountLabel: "Общее количество записей",
+    search: "Поиск...",
+    loading: "Загрузка...",
+    loadingMore: "Загружается еще...",
+    empty: "Сообщения не найдены.",
+    upgrade: "Перейти на Pro Gemini AI BOT",
+    placeholder: "Напишите сообщение...",
+    today: "Сегодня",
+    yesterday: "Вчера",
+    unknownDate: "Дата неизвестна",
+    loadError: "Не удалось загрузить сообщения ИИ.",
+    loadMoreError: "Не удалось загрузить дополнительные сообщения ИИ.",
+    feeLoadError: "Не удалось загрузить стоимость в coin.",
+    thinking: "Gemini AI готовит ответ...",
+    noReply: "Ответ ИИ пока не получен.",
+    sendError: "Не удалось отправить сообщение.",
+    sendCouldNot: "Сообщение не удалось отправить.",
+    sent: "Сообщение ИИ отправлено.",
+  },
+  es: {
+    title: "Mensajes de IA",
+    messages: "Mensajes de IA",
+    totalCountLabel: "Cantidad total de registros",
+    search: "Buscar...",
+    loading: "Cargando...",
+    loadingMore: "Cargando más...",
+    empty: "No se encontraron mensajes.",
+    upgrade: "Actualizar a Pro Gemini AI BOT",
+    placeholder: "Escribe tu mensaje...",
+    today: "Hoy",
+    yesterday: "Ayer",
+    unknownDate: "Fecha desconocida",
+    loadError: "No se pudieron cargar los mensajes de IA.",
+    loadMoreError: "No se pudieron cargar más mensajes de IA.",
+    feeLoadError: "No se pudo cargar el costo en coin.",
+    thinking: "Gemini AI está preparando la respuesta...",
+    noReply: "La respuesta de IA aún no se ha recibido.",
+    sendError: "No se pudo enviar el mensaje.",
+    sendCouldNot: "El mensaje no se pudo enviar.",
+    sent: "Mensaje de IA enviado.",
+  },
+  fr: {
+    title: "Messages IA",
+    messages: "Messages IA",
+    totalCountLabel: "Nombre total d'enregistrements",
+    search: "Rechercher...",
+    loading: "Chargement...",
+    loadingMore: "Chargement de plus...",
+    empty: "Aucun message trouvé.",
+    upgrade: "Passer à Pro Gemini AI BOT",
+    placeholder: "Écrivez votre message...",
+    today: "Aujourd'hui",
+    yesterday: "Hier",
+    unknownDate: "Date inconnue",
+    loadError: "Impossible de charger les messages IA.",
+    loadMoreError: "Impossible de charger plus de messages IA.",
+    feeLoadError: "Impossible de charger le coût en coin.",
+    thinking: "Gemini AI prépare la réponse...",
+    noReply: "La réponse IA n'a pas encore été reçue.",
+    sendError: "Échec de l'envoi du message.",
+    sendCouldNot: "Le message n'a pas pu être envoyé.",
+    sent: "Message IA envoyé.",
+  },
 };
 
 function resolveBackendMessage(payload: any): string {
@@ -102,25 +249,25 @@ function getStartOfDayMs(value: Date): number {
   return copy.getTime();
 }
 
-function formatConversationGroupLabel(value: Date, lang: "tr" | "en"): string {
+function formatConversationGroupLabel(value: Date, lang: Lang, labels: { today: string; yesterday: string }): string {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const target = new Date(value);
   target.setHours(0, 0, 0, 0);
   const dayDiff = Math.round((today.getTime() - target.getTime()) / 86400000);
 
-  if (dayDiff === 0) return lang === "tr" ? "Bugün" : "Today";
-  if (dayDiff === 1) return lang === "tr" ? "Dün" : "Yesterday";
+  if (dayDiff === 0) return labels.today;
+  if (dayDiff === 1) return labels.yesterday;
 
-  return new Intl.DateTimeFormat(lang === "tr" ? "tr-TR" : "en-US", {
+  return new Intl.DateTimeFormat(localeForLang(lang), {
     day: "2-digit",
     month: "long",
     year: "numeric",
   }).format(value);
 }
 
-function formatConversationTime(value: Date, lang: "tr" | "en"): string {
-  return new Intl.DateTimeFormat(lang === "tr" ? "tr-TR" : "en-US", {
+function formatConversationTime(value: Date, lang: Lang): string {
+  return new Intl.DateTimeFormat(localeForLang(lang), {
     hour: "2-digit",
     minute: "2-digit",
   }).format(value);
@@ -158,35 +305,9 @@ export default function AiPage() {
   const params = useParams<{ lang?: string | string[] }>();
   const rawLang = Array.isArray(params?.lang) ? params?.lang[0] : params?.lang;
   const lang = normalizeLang(rawLang ?? "tr");
-  const dil = lang === "tr" ? 1 : 2;
+  const dil = langToDil(lang);
 
-  const text = useMemo(
-    () =>
-      lang === "tr"
-        ? {
-            title: "Yapay Zeka Mesajları",
-            messages: "Yapay Zeka Mesajları",
-            totalCountLabel: "Toplam Kayıt Sayısı",
-            search: "Ara...",
-            loading: "Yükleniyor...",
-            loadingMore: "Daha fazla yükleniyor...",
-            empty: "Mesaj bulunamadı.",
-            upgrade: "Pro Gemini AI BOT'a yükselt",
-            placeholder: "Mesajınızı yazın...",
-          }
-        : {
-            title: "AI Messages",
-            messages: "AI Messages",
-            totalCountLabel: "Total Record Count",
-            search: "Search...",
-            loading: "Loading...",
-            loadingMore: "Loading more...",
-            empty: "No messages found.",
-            upgrade: "Upgrade to Pro Gemini AI BOT",
-            placeholder: "Type your message...",
-          },
-    [lang]
-  );
+  const text = useMemo(() => AI_TEXT[lang], [lang]);
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -198,8 +319,14 @@ export default function AiPage() {
   const [pendingMessages, setPendingMessages] = useState<ChatMessage[]>([]);
   const [pendingConversationNr, setPendingConversationNr] = useState<number | null>(null);
   const [reloadTick, setReloadTick] = useState(0);
-  const [sendPopupMessage, setSendPopupMessage] = useState<string | null>(null);
-  const [sendErrorModalMessage, setSendErrorModalMessage] = useState<string | null>(null);
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+  const [sendModalMode, setSendModalMode] = useState<OfferModalMode>("form");
+  const [sendCoinFee, setSendCoinFee] = useState<number | null>(null);
+  const [sendFeeLoading, setSendFeeLoading] = useState(false);
+  const [sendMessageInput, setSendMessageInput] = useState("");
+  const [sendMessageLoading, setSendMessageLoading] = useState(false);
+  const [sendMessageError, setSendMessageError] = useState<string | null>(null);
+  const [sendSuccessMessage, setSendSuccessMessage] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
@@ -212,12 +339,6 @@ export default function AiPage() {
     const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
-
-  useEffect(() => {
-    if (!sendPopupMessage) return;
-    const timer = setTimeout(() => setSendPopupMessage(null), 2600);
-    return () => clearTimeout(timer);
-  }, [sendPopupMessage]);
 
   useEffect(() => {
     let cancelled = false;
@@ -258,7 +379,7 @@ export default function AiPage() {
         });
       } catch (err: any) {
         if (cancelled || requestToken !== queryTokenRef.current) return;
-        setError(String(err?.message ?? "Failed to load AI messages"));
+        setError(String(err?.message ?? text.loadError));
         setItems([]);
         setSelectedConversation(null);
       } finally {
@@ -269,7 +390,7 @@ export default function AiPage() {
     return () => {
       cancelled = true;
     };
-  }, [dil, search, reloadTick]);
+  }, [dil, search, reloadTick, text.loadError]);
 
   const hasMore = totalCount > 0 && items.length < totalCount;
 
@@ -301,11 +422,11 @@ export default function AiPage() {
       if (Number.isFinite(nextPageSize) && nextPageSize > 0) setPageSize(nextPageSize);
     } catch (err: any) {
       if (requestToken !== queryTokenRef.current) return;
-      setError(String(err?.message ?? "Failed to load more AI messages"));
+      setError(String(err?.message ?? text.loadMoreError));
     } finally {
       if (requestToken === queryTokenRef.current) setLoadingMore(false);
     }
-  }, [dil, error, hasMore, loading, loadingMore, page, pageSize, search, totalCount]);
+  }, [dil, error, hasMore, loading, loadingMore, page, pageSize, search, text.loadMoreError, totalCount]);
 
   useEffect(() => {
     const root = listContainerRef.current;
@@ -336,15 +457,13 @@ export default function AiPage() {
       const conversationDate = parseDate(item.OlusturmaZamani) ?? parseDate(item.GuncellemeZamani);
       const dateKey = conversationDate ? getDateKey(conversationDate) : "unknown";
       const dateLabel = conversationDate
-        ? formatConversationGroupLabel(conversationDate, lang)
-        : lang === "tr"
-        ? "Tarih bilinmiyor"
-        : "Unknown date";
+        ? formatConversationGroupLabel(conversationDate, lang, text)
+        : text.unknownDate;
       const dateSort = conversationDate ? getStartOfDayMs(conversationDate) : Number.NEGATIVE_INFINITY;
       const time = conversationDate ? formatConversationTime(conversationDate, lang) : "";
       return { id, title: "AI Bot", subtitle, time, unread: 1, dateKey, dateLabel, dateSort };
     });
-  }, [items, lang]);
+  }, [items, lang, text]);
 
   const conversationGroups = useMemo<ConversationGroup[]>(() => {
     const groupMap = new Map<string, ConversationGroup>();
@@ -417,31 +536,110 @@ export default function AiPage() {
     return null;
   };
 
-  const handleSendMessage = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const value = composerInput.trim();
+  const closeSendModal = () => {
+    setSendModalOpen(false);
+    setSendModalMode("form");
+    setSendMessageError(null);
+    setSendSuccessMessage(null);
+    setSendMessageLoading(false);
+    window.dispatchEvent(new CustomEvent(CUSTOMER_UPDATED_EVENT));
+  };
+
+  const openSendModal = async () => {
+    setSendModalOpen(true);
+    setSendModalMode("form");
+    setSendMessageError(null);
+    setSendSuccessMessage(null);
+    setSendMessageLoading(false);
+    setSendFeeLoading(true);
+    setSendMessageInput(composerInput.trim());
+
+    try {
+      const data = await api.get<AiFeeResponse>(`/api/ai-messages/fee?dil=${dil}`);
+      const nextFee =
+        typeof data?.Data?.MesajUcreti === "number" && Number.isFinite(data.Data.MesajUcreti)
+          ? data.Data.MesajUcreti
+          : null;
+      setSendCoinFee(nextFee);
+    } catch (error) {
+      setSendCoinFee(null);
+      setSendMessageError(resolveBackendMessage(error) || text.feeLoadError);
+    } finally {
+      setSendFeeLoading(false);
+    }
+  };
+
+  const openCoinPurchase = () => {
+    closeSendModal();
+    window.dispatchEvent(new CustomEvent(OPEN_COIN_PURCHASE_EVENT));
+  };
+
+  const finalizeAiReply = async (
+    aiMesajNr: number | null,
+    pendingUserId: string,
+    pendingBotId: string,
+    initialReply: string,
+    noReplyText: string
+  ) => {
+    let aiCevap = initialReply;
+
+    try {
+      if (!aiCevap && aiMesajNr != null) {
+        aiCevap = (await waitForAiReply(aiMesajNr)) ?? "";
+      }
+
+      if (aiCevap && aiMesajNr != null) {
+        setPendingMessages((prev) =>
+          prev.map((message) =>
+            message.id === pendingBotId ? { ...message, text: aiCevap } : message
+          )
+        );
+        await api.post(`/api/ai-messages/update?dil=${dil}`, {
+          aiMesajNr,
+          aiCevap,
+        });
+      } else {
+        setPendingMessages((prev) =>
+          prev.map((message) =>
+            message.id === pendingBotId ? { ...message, text: noReplyText } : message
+          )
+        );
+      }
+    } catch {
+      setPendingMessages((prev) =>
+        prev.map((message) =>
+          message.id === pendingBotId ? { ...message, text: noReplyText } : message
+        )
+      );
+    } finally {
+      setReloadTick((prev) => prev + 1);
+      setPendingMessages((prev) =>
+        prev.filter((message) => message.id !== pendingUserId && message.id !== pendingBotId)
+      );
+      setPendingConversationNr(null);
+    }
+  };
+
+  const submitAiMessage = async () => {
+    const value = sendMessageInput.trim();
     if (!value) return;
 
     const pendingBase = Date.now();
     const pendingUserId = `p-u-${pendingBase}`;
     const pendingBotId = `p-b-${pendingBase}`;
-    const thinkingText =
-      lang === "tr" ? "Gemini AI yanıtı hazırlanıyor..." : "Gemini AI response is being prepared...";
-    const noReplyText =
-      lang === "tr" ? "AI cevabı henüz alınamadı." : "AI response has not been received yet.";
-    const sendErrorText = lang === "tr" ? "Mesaj gönderimi başarısız." : "Failed to send message.";
+    const thinkingText = text.thinking;
+    const noReplyText = text.noReply;
+    const sendErrorText = text.sendError;
+    const currentConversationNr = selectedConversation;
 
     setPendingMessages((prev) => [
       ...prev,
       { id: pendingUserId, role: "user", text: value },
       { id: pendingBotId, role: "bot", text: thinkingText },
     ]);
-    setPendingConversationNr(selectedConversation);
-
-    setComposerInput("");
-    setError(null);
-    setSendPopupMessage(null);
-    setSendErrorModalMessage(null);
+    setPendingConversationNr(currentConversationNr);
+    setSendMessageLoading(true);
+    setSendMessageError(null);
 
     try {
       const sendResponse = await api.post<AiSendResponse>(
@@ -451,19 +649,24 @@ export default function AiPage() {
       const sendStatusCode = Number(sendResponse?.StatusCode);
       if (sendStatusCode !== 201) {
         const backendMessage = resolveBackendMessage(sendResponse);
-        const popupMessage =
-          backendMessage || (lang === "tr" ? "Mesaj gönderilemedi." : "Message could not be sent.");
-        setSendErrorModalMessage(popupMessage);
+        const popupMessage = backendMessage || text.sendCouldNot;
         setPendingMessages((prev) =>
           prev.filter((message) => message.id !== pendingUserId && message.id !== pendingBotId)
         );
         setPendingConversationNr(null);
+        if (/Yetersiz coin bakiyesi|Insufficient coin balance/i.test(popupMessage)) {
+          setSendModalMode("insufficient");
+        } else {
+          setSendMessageError(popupMessage);
+        }
         return;
       }
+
       const successMessage = resolveBackendMessage(sendResponse);
-      if (successMessage) {
-        setSendPopupMessage(successMessage);
-      }
+      setSendModalMode("success");
+      setSendSuccessMessage(successMessage || text.sent);
+      setComposerInput("");
+      setSendMessageInput("");
 
       const aiMesajNrValue = Number(sendResponse?.Data?.Nr);
       const aiMesajNr =
@@ -512,51 +715,30 @@ export default function AiPage() {
         })
       );
       setReloadTick((prev) => prev + 1);
-      setPendingMessages((prev) =>
-        prev.filter((message) => message.id !== pendingUserId && message.id !== pendingBotId)
-      );
-      setPendingConversationNr(null);
+      void finalizeAiReply(aiMesajNr, pendingUserId, pendingBotId, aiCevap, noReplyText);
     } catch (err: any) {
       setPendingMessages((prev) =>
         prev.filter((message) => message.id !== pendingUserId && message.id !== pendingBotId)
       );
       setPendingConversationNr(null);
-      setSendErrorModalMessage(resolveBackendMessage(err) || sendErrorText);
+      if (/Yetersiz coin bakiyesi|Insufficient coin balance/i.test(resolveBackendMessage(err))) {
+        setSendModalMode("insufficient");
+      } else {
+        setSendMessageError(resolveBackendMessage(err) || sendErrorText);
+      }
+    } finally {
+      setSendMessageLoading(false);
     }
+  };
+
+  const handleSendMessage = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!composerInput.trim()) return;
+    void openSendModal();
   };
 
   return (
     <div className="min-h-screen bg-[#f3f3f5]">
-      {sendErrorModalMessage ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 px-4">
-          <div
-            role="alertdialog"
-            aria-modal="true"
-            className="w-full max-w-md rounded-2xl border border-[#e7d6b4] bg-white p-5 shadow-2xl"
-          >
-            <h2 className="text-[18px] font-semibold text-[#1f232b]">
-              {lang === "tr" ? "Hata" : "Error"}
-            </h2>
-            <p className="mt-2 text-[14px] leading-6 text-[#4b5567]">{sendErrorModalMessage}</p>
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setSendErrorModalMessage(null)}
-                className="rounded-xl bg-[var(--gtg-orange)] px-5 py-2 text-[14px] font-semibold text-white transition hover:brightness-95"
-              >
-                {lang === "tr" ? "Tamam" : "OK"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {sendPopupMessage ? (
-        <div className="fixed right-5 top-5 z-[90] rounded-xl border border-[#f5bf62] bg-[#fff5e6] px-4 py-2 text-[13px] font-semibold text-[#975603] shadow-lg">
-          {sendPopupMessage}
-        </div>
-      ) : null}
-
       <header className="flex items-center border-b border-[#d8dde6] bg-[#f3f3f5] px-4 py-4 lg:px-7">
         <h1 className="ml-14 text-[24px] font-semibold text-[#1f232b] lg:ml-0">{text.title}</h1>
       </header>
@@ -676,36 +858,17 @@ export default function AiPage() {
           <div className="absolute bottom-4 left-4 right-4 xl:left-5 xl:right-5">
             <form
               onSubmit={handleSendMessage}
-              className="flex items-center gap-2 rounded-full border border-[#d2d7e0] bg-[#eceff5] px-4 py-2.5"
+              className="flex w-full min-w-0 items-center gap-2 rounded-full border border-[#d2d7e0] bg-[#eceff5] px-3 py-2 sm:px-4 sm:py-2.5"
             >
               <input
                 value={composerInput}
                 onChange={(event) => setComposerInput(event.target.value)}
                 placeholder={text.placeholder}
-                className="h-8 flex-1 bg-transparent text-[16px] text-[#4f5c7a] outline-none placeholder:text-[#4f5c7a]/85"
+                className="h-8 min-w-0 flex-1 bg-transparent text-[16px] text-[#4f5c7a] outline-none placeholder:text-[#4f5c7a]/85"
               />
               <button
-                type="button"
-                className="grid h-8 w-8 place-items-center rounded-full text-[#7482a8] transition hover:bg-white/65"
-              >
-                <Smile size={18} />
-              </button>
-              <button
-                type="button"
-                className="grid h-8 w-8 place-items-center rounded-full text-[#7482a8] transition hover:bg-white/65"
-              >
-                <SlidersHorizontal size={18} />
-              </button>
-              <button
-                type="button"
-                className="grid h-8 w-8 place-items-center rounded-full text-[#7482a8] transition hover:bg-white/65"
-              >
-                <Paperclip size={18} />
-              </button>
-              <span className="h-7 w-px bg-[#cbd2e2]" />
-              <button
                 type="submit"
-                className="mr-9 grid h-8 w-8 place-items-center rounded-full text-[#7482a8] transition hover:bg-white/65"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-[#7482a8] transition hover:bg-white/65"
               >
                 <SendHorizontal size={18} />
               </button>
@@ -713,6 +876,23 @@ export default function AiPage() {
           </div>
         </section>
       </div>
+
+      <OfferFlowModal
+        open={sendModalOpen}
+        lang={lang}
+        kind="ai"
+        mode={sendModalMode}
+        coinFee={sendCoinFee}
+        loadingFee={sendFeeLoading}
+        message={sendMessageInput}
+        sending={sendMessageLoading}
+        error={sendMessageError}
+        successMessage={sendSuccessMessage}
+        onMessageChange={setSendMessageInput}
+        onClose={closeSendModal}
+        onSubmit={() => void submitAiMessage()}
+        onOpenTopUp={openCoinPurchase}
+      />
     </div>
   );
 }

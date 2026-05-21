@@ -1,12 +1,16 @@
-import { normalizeLang, type Lang } from "@/lib/i18n/languages";
+import { LANG_SEGMENT, LANGS, normalizeLang, type Lang } from "@/lib/i18n/languages";
+
+const LANG_PATH_RE = new RegExp(`^/(${LANG_SEGMENT})\\b`);
 
 export function otherLang(lang: string): Lang {
-  return normalizeLang(lang) === "tr" ? "en" : "tr";
+  const current = normalizeLang(lang);
+  const currentIndex = LANGS.indexOf(current);
+  return LANGS[(currentIndex + 1) % LANGS.length];
 }
 
 export function toLangHref(pathname: string, targetLang: string): string {
   const target = normalizeLang(targetLang);
-  if (/^\/(tr|en)\b/.test(pathname)) return pathname.replace(/^\/(tr|en)\b/, `/${target}`);
+  if (LANG_PATH_RE.test(pathname)) return pathname.replace(LANG_PATH_RE, `/${target}`);
   return `/${target}${pathname.startsWith("/") ? "" : "/"}${pathname}`;
 }
 

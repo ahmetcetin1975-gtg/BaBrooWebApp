@@ -1,12 +1,13 @@
 ﻿import { NextResponse } from "next/server";
 import { proxyJson } from "@/lib/server/proxy";
+import { langToDil, normalizeDil } from "@/lib/i18n/languages";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const countryCodeRaw = body?.countryCode ?? "";
   const phoneNumber = body?.phoneNumber ?? body?.phone ?? "";
   const lang = body?.lang ?? "";
-  const dil = typeof body?.dil === "number" ? body.dil : lang === "tr" ? 1 : 2;
+  const dil = typeof body?.dil === "number" ? normalizeDil(body.dil) : langToDil(lang);
 
   if (!countryCodeRaw || !phoneNumber) {
     return NextResponse.json({ message: "Phone required" }, { status: 400 });

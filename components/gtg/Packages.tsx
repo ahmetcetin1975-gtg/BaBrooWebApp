@@ -1,14 +1,51 @@
 ﻿"use client";
-
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { useTranslate } from "@/components/gtg/TranslationProvider";
 import { getBankInfo, getCompanyInfo, getPrices } from "@/lib/gtg/api";
+import { normalizeLang } from "@/lib/gtg/config";
 import type { BankAccountModel, InvoiceInformationModel, PricesModel } from "@/lib/gtg/models";
 import { Modal } from "@/components/gtg/Modal";
 import { GtgLoading } from "@/components/gtg/GtgLoading";
 
+//const REGISTER_URL = "https://app.babroo.co/app.babroo/seller/auth-register-seller.asp";
+
+function getPackageName(item: PricesModel | null): string {
+  return (item?.PriceName ?? item?.PaketAdi ?? "").trim().toUpperCase();
+}
+
+function findPackage(prices: PricesModel[], keywords: string[], fallbackIndex: number): PricesModel | null {
+  const matched = prices.find((item) => {
+    const name = getPackageName(item);
+    return keywords.some((keyword) => name.includes(keyword));
+  });
+
+  return matched ?? prices[fallbackIndex] ?? null;
+}
+
+function getMonthlyPrice(item: PricesModel | null): number | string {
+  return item?.Prices2 ?? item?.Fiyat1 ?? "-";
+}
+
+function getTotalPrice(item: PricesModel | null): number | string {
+  return item?.Prices1 ?? item?.Fiyat2 ?? "-";
+}
+
+function getRegisterHref(
+  lang: string,
+  item: PricesModel | null,
+  fallbackId: number
+): string {
+  const priceId = item?.Id && item.Id > 0 ? item.Id : fallbackId;
+  return `/${lang}/register`;
+}
+
 export function Packages() {
+  const params = useParams();
+  const lang = normalizeLang(String(params?.lang ?? "tr"));
+
   const t = useTranslate();
   const [isLoading, setIsLoading] = useState(true);
   const [isActive, setIsActive] = useState(false);
@@ -25,12 +62,19 @@ export function Packages() {
         if (!mounted) return;
         setCompanyData(company);
         setPaymentData(bank ?? []);
-        const basic = prices.find((item) => item.Id === 5 || item.Id === 1) ?? prices[0];
-        const adv = prices.find((item) => item.Id === 6 || item.Id === 2) ?? prices[1];
-        const premium = prices.find((item) => item.Id === 7 || item.Id === 3) ?? prices[2];
+        const orderedPrices = [...prices].sort((left, right) => left.Id - right.Id);
+        const basic = findPackage(orderedPrices, ["BASIC"], 0);
+        const adv = findPackage(orderedPrices, ["ADVANTAGE", "ADVANTAGES"], 1);
+        const premium = findPackage(orderedPrices, ["PREMIUM", "BUSINESS"], 2);
         setBasicPackage(basic ?? null);
         setAdvPackage(adv ?? null);
         setPremiumPackage(premium ?? null);
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setBasicPackage(null);
+        setAdvPackage(null);
+        setPremiumPackage(null);
       })
       .finally(() => {
         if (mounted) setIsLoading(false);
@@ -79,16 +123,16 @@ export function Packages() {
                 <h3 className="mb-6 text-xl font-medium dark:text-white">BASIC</h3>
                 <div className="mb-6 dark:text-white/50">
                   <span className="relative h6 -top-5 text-xl">$</span>
-                  <span className="text-5xl h6 font-medium dark:text-white">{basicPackage.Prices2}</span>
+                  <span className="text-5xl h6 font-medium dark:text-white">{getMonthlyPrice(basicPackage)}</span>
                   <span className="inline-block h6 ml-1">/ {t("LCOD_LBL_MONTH")}</span>
                 </div>
-                <p className="mb-6 text-slate-400">{t("LCOD_LBL_THREE_MONTHS_TOTAL")} : $ {basicPackage.Prices1}</p>
-                <a
-                  href="https://app.gotradego.co/app.gotradego/seller/auth-register-seller.asp?priceId=5_1"
-                  className="py-2 px-5 inline-block font-semibold tracking-wide border align-middle duration-500 text-base text-center bg-blue-700/5 hover:bg-blue-700 border-blue-700/10 hover:border-blue-700 text-blue-700 hover:text-white rounded-md w-full"
-                >
-                  {t("LCOD_LBL_REGISTER_NOW")}
-                </a>
+                <p className="mb-6 text-slate-400">{t("LCOD_LBL_THREE_MONTHS_TOTAL")} : $ {getTotalPrice(basicPackage)}</p>
+                <Link href={getRegisterHref(lang, basicPackage, 5)}>
+                  <span className="py-2 px-5 inline-block font-semibold tracking-wide border align-middle duration-500 text-base text-center bg-blue-700/5 hover:bg-blue-700 border-blue-700/10 hover:border-blue-700 text-orange-700 hover:text-white rounded-md w-full">
+                    {t("LCOD_LBL_REGISTER_NOW")}
+                  </span>
+                </Link>
+                
               </div>
               <div className="border-b border-slate-200 dark:border-slate-200/5"></div>
               <ul className="self-start pt-8">
@@ -120,16 +164,16 @@ export function Packages() {
                 <h3 className="mb-6 text-xl font-medium text-white">ADVANTAGES</h3>
                 <div className="mb-6 text-white/50">
                   <span className="relative h6 -top-5 text-xl">$</span>
-                  <span className="text-5xl h6 font-bold text-white">{advPackage.Prices2}</span>
+                  <span className="text-5xl h6 font-bold text-white">{getMonthlyPrice(advPackage)}</span>
                   <span className="inline-block h6 ml-1">/ {t("LCOD_LBL_MONTH")}</span>
                 </div>
-                <p className="mb-6 text-white">{t("LCOD_LBL_THREE_MONTHS_TOTAL")} : $ {advPackage.Prices1}</p>
-                <a
-                  href="https://app.gotradego.co/app.gotradego/seller/auth-register-seller.asp?priceId=6_1"
-                  className="py-2 px-5 inline-block font-semibold tracking-wide border align-middle duration-500 text-base text-center bg-orange-500 hover:bg-orange-600 border-orange-500 hover:border-orange-600 text-white rounded-md w-full"
-                >
-                  {t("LCOD_LBL_REGISTER_NOW")}
-                </a>
+                <p className="mb-6 text-white">{t("LCOD_LBL_THREE_MONTHS_TOTAL")} : $ {getTotalPrice(advPackage)}</p>
+                <Link href={getRegisterHref(lang, basicPackage, 6)}>
+                  <span className="py-2 px-5 inline-block font-semibold tracking-wide border align-middle duration-500 text-base text-center bg-blue-700/5 hover:bg-blue-700 border-blue-700/10 hover:border-blue-700 text-orange-700 hover:text-white rounded-md w-full">
+                    {t("LCOD_LBL_REGISTER_NOW")}
+                  </span>
+                </Link>
+
               </div>
               <div className="border-b border-slate-200/10"></div>
               <ul className="self-start pt-8">
@@ -161,17 +205,16 @@ export function Packages() {
                 <h3 className="mb-6 text-xl font-medium dark:text-white">BUSINESS</h3>
                 <div className="mb-6 dark:text-white/50">
                   <span className="relative h6 -top-5 text-xl">$</span>
-                  <span className="text-5xl h6 font-medium dark:text-white">{premiumPackage.Prices2}</span>
+                  <span className="text-5xl h6 font-medium dark:text-white">{getMonthlyPrice(premiumPackage)}</span>
                   <span className="inline-block h6 ml-1">/ {t("LCOD_LBL_MONTH")}</span>
                 </div>
-                <p className="mb-6 text-slate-400">{t("LCOD_LBL_THREE_MONTHS_TOTAL")} : $ {premiumPackage.Prices1}</p>
-                <a
-                  href="https://app.gotradego.co/app.gotradego/seller/auth-register-seller.asp?priceId=7_1"
-                  className="py-2 px-5 inline-block font-semibold tracking-wide border align-middle duration-500 text-base text-center bg-blue-700/5 hover:bg-blue-700 border-blue-700/10 hover:border-blue-700 text-blue-700 hover:text-white rounded-md w-full"
-                >
-                  {t("LCOD_LBL_REGISTER_NOW")}
-                </a>
-              </div>
+                <p className="mb-6 text-slate-400">{t("LCOD_LBL_THREE_MONTHS_TOTAL")} : $ {getTotalPrice(premiumPackage)}</p>
+                <Link href={getRegisterHref(lang, basicPackage, 7)}>
+                  <span className="py-2 px-5 inline-block font-semibold tracking-wide border align-middle duration-500 text-base text-center bg-blue-700/5 hover:bg-blue-700 border-blue-700/10 hover:border-blue-700 text-orange-700 hover:text-white rounded-md w-full">
+                    {t("LCOD_LBL_REGISTER_NOW")}
+                  </span>
+                </Link>
+             </div>
               <div className="border-b border-slate-200 dark:border-slate-200/5"></div>
               <ul className="self-start pt-8">
                 <li className="flex items-center mb-1 text-slate-400 ms-0">
@@ -282,5 +325,4 @@ export function Packages() {
     </>
   );
 }
-
 

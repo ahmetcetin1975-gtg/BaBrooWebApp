@@ -3,12 +3,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronDown, ChevronLeft, Eye, EyeOff, X } from "lucide-react";
+import { ArrowRight, Bell, ChevronDown, ChevronLeft, Eye, EyeOff, Mail, X } from "lucide-react";
 import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
+import { FooterMain } from "@/components/gtg/FooterMain";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { BrandHeader } from "@/components/layout/BrandHeader";
 import { api } from "@/lib/api/client";
 import { getMessages } from "@/lib/i18n/messages";
-import { normalizeLang } from "@/lib/i18n/languages";
+import { langToDil, normalizeLang } from "@/lib/i18n/languages";
 import { LanguageSwitch } from "@/components/i18n/LanguageSwitch";
 
 type AccountType = "company" | "serviceProvider";
@@ -40,6 +42,23 @@ type CountriesResponse = {
   StatusCode?: number;
   Message?: string;
   Data?: CountryItem[] | null;
+  data?: CountryItem[] | null;
+};
+
+type CityItem = {
+  Id?: number;
+  Nr?: number;
+  UlkeId?: number;
+  UlkeNr?: number;
+  UlkeAdi?: string;
+  IlAdi?: string;
+};
+
+type CitiesResponse = {
+  StatusCode?: number;
+  Message?: string;
+  Data?: CityItem[] | null;
+  data?: CityItem[] | null;
 };
 
 type TermsItem = {
@@ -63,17 +82,39 @@ type RegisterResponse = {
   Meta?: unknown;
   Data?: unknown;
   ok?: boolean;
+  success?: boolean;
   message?: string;
   verified?: boolean;
+  musteriNr?: number;
   [k: string]: any;
 };
 
 const OTP_LENGTH = 6;
-const OTP_INITIAL_SECONDS = 153;
+
+function resolveOtpInitialSeconds(): number {
+  const raw = process.env.NEXT_PUBLIC_REGISTER_OTP_SECONDS?.trim();
+  const parsed = Number(raw);
+  if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
+  return 180;
+}
+
+const OTP_INITIAL_SECONDS = resolveOtpInitialSeconds();
 
 function normalizeCountries(data?: CountriesResponse): CountryItem[] {
-  if (!Array.isArray(data?.Data)) return [];
-  return data.Data.filter((item) => typeof item?.Id === "number");
+  const items = data?.Data ?? data?.data;
+  if (!Array.isArray(items)) return [];
+  return items.filter((item) => typeof item?.Id === "number");
+}
+
+function normalizeCities(data?: CitiesResponse): CityItem[] {
+  const items = data?.Data ?? data?.data;
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      ...item,
+      Id: typeof item?.Id === "number" ? item.Id : typeof item?.Nr === "number" ? item.Nr : undefined,
+    }))
+    .filter((item) => typeof item?.Id === "number");
 }
 
 function hasCountryId(item: CountryItem): item is CountryItem & { Id: number } {
@@ -84,6 +125,12 @@ function countryDisplay(item: CountryItem): string {
   const name = (item.UlkeAdi ?? "").trim() || "-";
   const code = (item.TelKodu ?? "").trim().replace(/^\+/, "");
   return code ? `${name} (+${code})` : name;
+}
+
+function cityDisplay(item: CityItem): string {
+  const city = (item.IlAdi ?? "").trim() || "-";
+  const country = (item.UlkeAdi ?? "").trim();
+  return country ? `${city} - ${country}` : city;
 }
 
 function readErrorMessage(error: any, fallback: string): string {
@@ -101,7 +148,7 @@ function formatCountdown(totalSeconds: number): string {
 
 export default function Register({ lang }: { lang: string }) {
   const currentLang = normalizeLang(lang);
-  const dil = currentLang === "tr" ? 1 : 2;
+  const dil = langToDil(currentLang);
   const t = getMessages(currentLang);
 
   const [phoneCountryId, setPhoneCountryId] = useState<number | null>(1);
@@ -111,10 +158,14 @@ export default function Register({ lang }: { lang: string }) {
   const [countryMenuOpen, setCountryMenuOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
   const countryMenuRef = useRef<HTMLDivElement | null>(null);
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const [cities, setCities] = useState<CityItem[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [citiesError, setCitiesError] = useState<string | null>(null);
 
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"form" | "otp">("form");
+  const [step, setStep] = useState<"form" | "otp" | "notification">("form");
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(OTP_INITIAL_SECONDS);
   const otpInputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -124,9 +175,12 @@ export default function Register({ lang }: { lang: string }) {
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [agree, setAgree] = useState(false);
+  const [pendingMusteriNr, setPendingMusteriNr] = useState<number | null>(null);
+  const [notificationEnabled, setNotificationEnabled] = useState(true);
 
   const [busy, setBusy] = useState(false);
   const [errorModal, setErrorModal] = useState<string | null>(null);
+  const [supportModalOpen, setSupportModalOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [termsLoading, setTermsLoading] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
@@ -150,31 +204,40 @@ export default function Register({ lang }: { lang: string }) {
   }, [password]);
 
   const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-  const firstNamePlaceholder = currentLang === "tr" ? "İsim" : "First Name";
-  const lastNamePlaceholder = currentLang === "tr" ? "Soyisim" : "Last Name";
+  const firstNamePlaceholder = t.support.firstName;
+  const lastNamePlaceholder = t.support.lastName;
   const showOtpScreen = step === "otp";
+  const showNotificationScreen = step === "notification";
+  const showCompactScreen = showOtpScreen || showNotificationScreen;
 
   const formReady =
     firstName.trim().length >= 1 &&
     lastName.trim().length >= 1 &&
     email.trim().length >= 5 &&
+    selectedCityId != null &&
     phone.trim().length >= 8 &&
     pwRules.ok &&
     agree;
   const canSendOtp = formReady && !busy;
   const canVerifyOtp = otp.trim().length === OTP_LENGTH && !busy;
+  const canResendOtp = otpSecondsLeft <= 0 && !busy;
+  const canFinishNotificationStep = pendingMusteriNr != null && !busy;
   const otpDigits = useMemo(() => Array.from({ length: OTP_LENGTH }, (_, index) => otp[index] ?? ""), [otp]);
-  const overlayOpen = termsOpen || !!errorModal;
+  const overlayOpen = termsOpen || !!errorModal || supportModalOpen;
 
-  const countryLoadingText = currentLang === "tr" ? "Ulkeler yukleniyor..." : "Loading countries...";
-  const countryPlaceholderText = currentLang === "tr" ? "Ulke kodu secin" : "Select country code";
-  const countrySearchPlaceholder = currentLang === "tr" ? "Ulke ara" : "Search country";
-  const countryNoResultsText = currentLang === "tr" ? "Sonuc bulunamadi." : "No results found.";
-  const termsLoadingText = currentLang === "tr" ? "Şartlar ve Koşullar yükleniyor..." : "Loading Terms & Conditions...";
-  const termsErrorText = currentLang === "tr" ? "Şartlar ve Koşullar yüklenemedi." : "Failed to load Terms & Conditions.";
-  const acceptText = currentLang === "tr" ? "Kabul Et" : "Accept";
-  const declineText = currentLang === "tr" ? "Vazgeç" : "Decline";
-  const closeText = currentLang === "tr" ? "Kapat" : "Close";
+  const countryLoadingText = t.support.countryLoading;
+  const countryPlaceholderText = t.support.countryPlaceholder;
+  const countrySearchPlaceholder = t.support.countrySearch;
+  const countryNoResultsText = t.support.countryNoResults;
+  const cityPlaceholderText = currentLang === "tr" ? "İl seçiniz" : "Select city";
+  const cityLoadingText = currentLang === "tr" ? "İller yükleniyor" : "Loading cities";
+  const cityLoadFailedText = currentLang === "tr" ? "İller yüklenemedi." : "Failed to load cities.";
+  const cityNoResultsText = currentLang === "tr" ? "Bu ülke için il bulunamadı." : "No cities found for this country.";
+  const termsLoadingText = t.support.termsLoading;
+  const termsErrorText = t.support.termsLoadFailed;
+  const acceptText = t.support.accept;
+  const declineText = t.support.decline;
+  const closeText = t.support.close;
   const otpScreenTitle = currentLang === "tr" ? "6 haneli doğrulama kodunu gir" : "Enter 6-digit recoverycode";
   const otpScreenSubtitle =
     currentLang === "tr"
@@ -182,11 +245,31 @@ export default function Register({ lang }: { lang: string }) {
       : "The recovery code has been sent to your phone via SMS. Please enter the code below.";
   const otpResendPrefix = currentLang === "tr" ? "Kod gelmedi mi?" : "Didn’t get a code?";
   const otpResendLink = currentLang === "tr" ? "Tekrar gönder." : "Click to resend.";
+  const otpResendWaitingText =
+    currentLang === "tr" ? "Tekrar göndermek için bekleyin" : "Wait before resending";
   const otpBackText = currentLang === "tr" ? "Geri" : "Back";
   const otpCancelText = currentLang === "tr" ? "Vazgeç" : "Cancel";
   const otpVerifyText = currentLang === "tr" ? "Doğrula" : "Verify";
   const otpLoginAnotherText = currentLang === "tr" ? "Başka bir hesapla giriş yap" : "Log in with another account";
-  const errorModalTitle = currentLang === "tr" ? "Uyarı" : "Alert";
+  const notificationScreenTitle = currentLang === "tr" ? "Bildirimleri Aktifleştir" : "Enable Notifications";
+  const notificationScreenSubtitle =
+    currentLang === "tr"
+      ? "Kaydınız tamamlandı. Son adım olarak bildirimlerinizi aktif edin."
+      : "Your registration is complete. Enable notifications as the final step.";
+  const notificationScreenNote =
+    currentLang === "tr"
+      ? "Bildirim ayarınızı aşağıdaki anahtardan açıp kapatabilirsiniz."
+      : "You can turn your notification preference on or off using the switch below.";
+  const notificationToggleLabel = currentLang === "tr" ? "Sesli Bildirimler" : "Sound Notifications";
+  const notificationScreenButtonText =
+    currentLang === "tr" ? "Kaydı Tamamla" : "Complete Registration";
+  const notificationScreenSubmittingText =
+    currentLang === "tr" ? "Tamamlanıyor..." : "Finishing...";
+  const errorModalTitle = t.support.alert;
+  const supportTitle = t.support.title;
+  const supportSubtitle = t.support.subtitle;
+  const supportMailHref = "mailto:info@babroo.com";
+  const supportWhatsappHref = "https://wa.me/971544832320";
 
   useEffect(() => {
     let cancelled = false;
@@ -201,8 +284,7 @@ export default function Register({ lang }: { lang: string }) {
       } catch (e: any) {
         if (cancelled) return;
         setCountries([]);
-        const fallback = currentLang === "tr" ? "Ulkeler yuklenemedi." : "Failed to load countries.";
-        setCountriesError(String(e?.message ?? fallback));
+        setCountriesError(String(e?.message ?? t.support.countryLoadFailed));
       } finally {
         if (!cancelled) setCountriesLoading(false);
       }
@@ -223,6 +305,47 @@ export default function Register({ lang }: { lang: string }) {
       return first?.Id ?? 1;
     });
   }, [countries]);
+
+  useEffect(() => {
+    if (!phoneCountryId) {
+      setCities([]);
+      setSelectedCityId(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        setCitiesLoading(true);
+        setCitiesError(null);
+        const data = await api.get<CitiesResponse>(`/api/cities-public?dil=${dil}&ulkeId=${phoneCountryId}`);
+        if (cancelled) return;
+
+        const nextCities = normalizeCities(data).filter((item) => {
+          const countryId = item.UlkeId ?? item.UlkeNr;
+          return typeof countryId !== "number" || countryId === phoneCountryId;
+        });
+
+        setCities(nextCities);
+        setSelectedCityId((prev) => {
+          if (typeof prev === "number" && nextCities.some((item) => item.Id === prev)) return prev;
+          return null;
+        });
+      } catch (e: any) {
+        if (cancelled) return;
+        setCities([]);
+        setSelectedCityId(null);
+        setCitiesError(String(e?.message ?? cityLoadFailedText));
+      } finally {
+        if (!cancelled) setCitiesLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cityLoadFailedText, dil, phoneCountryId]);
 
   useEffect(() => {
     const onDocClick = (event: MouseEvent) => {
@@ -252,6 +375,10 @@ export default function Register({ lang }: { lang: string }) {
     () => countries.find((item) => item.Id === phoneCountryId) ?? null,
     [countries, phoneCountryId]
   );
+  const selectedCity = useMemo(
+    () => cities.find((item) => item.Id === selectedCityId) ?? null,
+    [cities, selectedCityId]
+  );
 
   const filteredCountries = useMemo(() => {
     const locale = currentLang === "tr" ? "tr-TR" : "en-US";
@@ -275,6 +402,8 @@ export default function Register({ lang }: { lang: string }) {
 
   function resetPhoneVerification() {
     setOtp("");
+    setPendingMusteriNr(null);
+    setNotificationEnabled(true);
     setOtpSecondsLeft(OTP_INITIAL_SECONDS);
     setStep("form");
   }
@@ -321,6 +450,7 @@ export default function Register({ lang }: { lang: string }) {
         telefon: phone.trim(),
         sifre: password,
         ulkeNr: phoneCountryId ?? 1,
+        ilNr: selectedCityId ?? 0,
         dil,
         kaynak: 2,
       });
@@ -340,27 +470,43 @@ export default function Register({ lang }: { lang: string }) {
     }
   }
 
+  async function syncNotificationPreference(musteriNr: number) {
+    await api.post<RegisterResponse>(
+      `/api/auth/register-bildirim-on-off?musteriNr=${musteriNr}&bildirim=${notificationEnabled ? 1 : 0}&kaynak=2&dil=${dil}`,
+      {}
+    );
+  }
+
   async function verifyOtp() {
     if (!canVerifyOtp) return;
 
     setBusy(true);
     try {
-      const res = await api.post<RegisterResponse>("/api/auth/otp-verify", {
+      const res = await api.post<RegisterResponse>("/api/auth/register-verify-otp", {
         countryCode: countryCodeRaw,
-        phone: phone.trim(),
-        otp,
-        purpose: "register",
-        lang,
+        phoneNumber: phone.trim(),
+        code: otp,
         dil,
       });
 
       const backendStatus = Number(res?.StatusCode ?? 200);
-      const verified = res?.verified === true || res?.ok === true || backendStatus < 400;
+      const verified =
+        res?.success === true ||
+        res?.verified === true ||
+        res?.ok === true ||
+        (res?.success == null && res?.verified == null && res?.ok == null && backendStatus < 400);
       if (!verified) {
         throw new Error(readErrorMessage(res, t.register.errors.otpVerifyFailed));
       }
 
-      window.location.href = `/${lang}/login`;
+      const musteriNr = Number((res as any)?.musteriNr ?? (res as any)?.Data?.musteriNr ?? 0);
+      if (!Number.isFinite(musteriNr) || musteriNr <= 0) {
+        throw new Error(readErrorMessage(res, t.register.errors.otpVerifyFailed));
+      }
+
+      setPendingMusteriNr(musteriNr);
+      setNotificationEnabled(true);
+      setStep("notification");
     } catch (e: any) {
       setErrorModal(readErrorMessage(e, t.register.errors.otpVerifyFailed));
     } finally {
@@ -368,17 +514,29 @@ export default function Register({ lang }: { lang: string }) {
     }
   }
 
-  async function resendOtp() {
-    if (busy) return;
+  async function completeNotificationStep() {
+    if (!canFinishNotificationStep || pendingMusteriNr == null) return;
 
     setBusy(true);
     try {
-      await api.post<RegisterResponse>("/api/auth/otp-send", {
+      await syncNotificationPreference(pendingMusteriNr);
+      window.location.href = `/${lang}/login`;
+    } catch (e: any) {
+      setErrorModal(readErrorMessage(e, t.register.errors.registerFailed));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resendOtp() {
+    if (!canResendOtp) return;
+
+    setBusy(true);
+    try {
+      await api.post<RegisterResponse>("/api/auth/register-resend-otp", {
         countryCode: countryCodeRaw,
         phoneNumber: phone.trim(),
-        phone: phone.trim(),
         dil,
-        lang,
       });
 
       setOtp("");
@@ -488,7 +646,7 @@ export default function Register({ lang }: { lang: string }) {
   }
 
   const fieldClass =
-    "h-[62px] w-full rounded-[10px] border border-[#DCE2EA] bg-white px-4 text-[14px] text-[#090914] outline-none transition placeholder:text-[#99A2B3] focus:border-[#B8C4D9] sm:px-5 sm:text-[15px]";
+    "h-[54px] w-full rounded-[10px] border border-[#DCE2EA] bg-white px-4 text-[13px] text-[#090914] outline-none transition placeholder:text-[#99A2B3] focus:border-[#B8C4D9] sm:px-5 sm:text-[14px]";
 
   const Rule = ({
     ok,
@@ -499,9 +657,9 @@ export default function Register({ lang }: { lang: string }) {
     label: string;
     highlightInvalid?: boolean;
   }) => (
-    <div className="flex items-center gap-3 text-[15px] leading-6 text-[#616A79] sm:text-[16px]">
+    <div className="flex items-center gap-2.5 text-[13px] leading-5 text-[#616A79] sm:text-[14px]">
       <span
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
+        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
           ok
             ? "border-[#FFB11A] bg-[#FFB11A] text-white"
             : highlightInvalid
@@ -509,47 +667,56 @@ export default function Register({ lang }: { lang: string }) {
             : "border-[#D6DCE8]"
         }`}
       >
-        {ok ? <span className="text-[12px] font-semibold leading-none">✓</span> : null}
+        {ok ? <span className="text-[11px] font-semibold leading-none">✓</span> : null}
       </span>
       <span>{label}</span>
     </div>
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className={`flex min-h-screen flex-col ${showCompactScreen ? "bg-[#F5F8FD]" : "bg-white"}`}>
       <div className="border-b border-[#E7ECF4] bg-white">
-        <div className="mx-auto grid h-[74px] max-w-[1600px] grid-cols-1 items-center px-6 lg:grid-cols-[minmax(540px,640px)_minmax(0,1fr)] lg:px-10">
-          <div className="flex items-center justify-between lg:pr-10">
+        <div
+          className={`mx-auto grid h-[74px] grid-cols-1 items-center px-6 ${
+            showCompactScreen
+              ? "max-w-[1600px] lg:grid-cols-[minmax(500px,600px)_minmax(0,1fr)] lg:px-10"
+              : "max-w-[1400px] lg:grid-cols-2 lg:px-16"
+          }`}
+        >
+          <div className={`flex items-center justify-between ${showCompactScreen ? "lg:col-span-2" : ""}`}>
             <div className="flex items-center gap-2 text-lg font-semibold">
-              <BrandHeader height={20} label={t.common.appName} priority />
+              <BrandHeader height={20} label={t.common.appName} href={`/${currentLang}`} priority />
             </div>
-            <LanguageSwitch
-              lang={currentLang}
-              showLabel={false}
-              className="text-xs font-semibold"
-              pillClassName="rounded-[10px] border-[#E2E8F0] px-3 py-2 text-[13px] shadow-none"
-            />
+            {!showCompactScreen ? (
+              <LanguageSwitch lang={currentLang} />
+            ) : null}
           </div>
         </div>
       </div>
 
-      <main className="mx-auto grid w-full max-w-[1600px] flex-1 grid-cols-1 lg:min-h-[920px] lg:grid-cols-[minmax(540px,640px)_minmax(0,1fr)]">
+      <main
+        className={`mx-auto grid w-full grid-cols-1 ${
+          showCompactScreen
+            ? "max-w-[1600px] lg:grid-cols-[minmax(500px,600px)_minmax(0,1fr)]"
+            : "max-w-[1400px] flex-1 lg:min-h-screen lg:grid-cols-2"
+        }`}
+      >
         <div
-          className={`border-b border-[#E7ECF4] px-6 py-6 lg:border-b-0 lg:border-[#E7ECF4] lg:px-10 ${
-            showOtpScreen ? "lg:col-span-2 lg:py-12" : "lg:border-r lg:py-4"
+          className={`border-b border-[#E7ECF4] px-6 py-6 lg:border-b-0 lg:border-[#E7ECF4] ${
+            showCompactScreen ? "lg:col-span-2 lg:px-10 lg:py-4" : "lg:border-r lg:px-16 lg:py-8"
           }`}
         >
-          <div className={`mx-auto flex h-full w-full flex-col ${showOtpScreen ? "max-w-[760px]" : "max-w-[520px]"}`}>
+          <div className={`mx-auto flex h-full w-full flex-col ${showCompactScreen ? "max-w-[760px]" : "max-w-[480px]"}`}>
             {showOtpScreen ? (
-              <div className="flex h-full w-full flex-col justify-center py-12">
-                <h1 className="text-[42px] font-semibold leading-[1.08] tracking-[-0.04em] text-[#090914] sm:text-[56px]">
+              <div className="flex w-full flex-col py-4 sm:py-5">
+                <h1 className="text-[25px] font-semibold leading-[1.12] tracking-[-0.04em] text-[#090914] sm:text-[31px]">
                   {otpScreenTitle}
                 </h1>
-                <p className="mt-4 max-w-[650px] text-[18px] leading-[1.4] text-[#757D8A] sm:text-[20px]">
+                <p className="mt-2.5 max-w-[560px] text-[13px] leading-[1.4] text-[#757D8A] sm:text-[14px]">
                   {otpScreenSubtitle}
                 </p>
 
-                <div className="mt-10 rounded-[18px] border border-[#E2E8F0] bg-white px-6 py-7 shadow-[0_24px_70px_rgba(15,23,42,0.10)] sm:px-8">
+                <div className="mt-5 rounded-[18px] border border-[#E2E8F0] bg-white px-4 py-[18px] shadow-[0_24px_70px_rgba(15,23,42,0.10)] sm:px-6 sm:py-5">
                   <div className="grid grid-cols-3 gap-3 sm:grid-cols-6" onPaste={handleOtpPaste}>
                     {otpDigits.map((digit, index) => (
                       <input
@@ -562,32 +729,42 @@ export default function Register({ lang }: { lang: string }) {
                         onKeyDown={(e) => handleOtpKeyDown(index, e)}
                         inputMode="numeric"
                         maxLength={1}
-                        className="h-[92px] w-full rounded-[12px] border border-[#D7DFEA] bg-white text-center text-[52px] font-normal leading-none text-[#FAA500] outline-none transition focus:border-[#9CA9BB] focus:ring-2 focus:ring-black/10"
+                        className="h-[72px] w-full rounded-[12px] border border-[#D7DFEA] bg-white text-center text-[36px] font-normal leading-none text-[#FAA500] outline-none transition focus:border-[#9CA9BB] focus:ring-2 focus:ring-black/10 sm:h-[78px] sm:text-[40px]"
                       />
                     ))}
                   </div>
 
-                  <div className="mt-5 text-center text-[16px] text-[#7B8494]">
-                    {otpResendPrefix}{" "}
-                    <button type="button" onClick={() => void resendOtp()} className="underline underline-offset-2">
-                      {otpResendLink}
-                    </button>
+                  <div className="mt-3 text-center text-[12px] text-[#7B8494] sm:text-[13px]">
+                    {canResendOtp ? (
+                      <>
+                        {otpResendPrefix}{" "}
+                        <button
+                          type="button"
+                          onClick={() => void resendOtp()}
+                          className="font-medium text-[#5F6572] underline underline-offset-2 transition-colors duration-200 hover:text-[#090914]"
+                        >
+                          {otpResendLink}
+                        </button>
+                      </>
+                    ) : (
+                      `${otpResendWaitingText}: ${formatCountdown(otpSecondsLeft)}`
+                    )}
                   </div>
 
-                  <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-[130px_1fr_220px]">
+                  <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[96px_1fr_168px]">
                     <button
                       type="button"
                       onClick={() => setStep("form")}
-                      className="inline-flex h-[56px] items-center justify-center gap-2 rounded-[12px] border border-[#D8E0EA] bg-white px-4 text-[16px] font-medium text-[#333A45]"
+                      className="inline-flex h-[40px] items-center justify-center gap-1 rounded-[12px] border border-[#D8E0EA] bg-white px-2.5 text-[12px] font-medium text-[#333A45] transition-all duration-200 hover:-translate-y-px hover:border-[#C8D1DE] hover:bg-[#F8FAFD] hover:shadow-sm sm:text-[13px]"
                     >
-                      <ChevronLeft className="h-5 w-5 text-[#FAA500]" />
+                      <ChevronLeft className="h-[16px] w-[16px] text-[#FAA500]" />
                       <span>{otpBackText}</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => resetPhoneVerification()}
-                      className="h-[56px] rounded-[12px] border border-[#D8E0EA] bg-white px-4 text-[16px] font-medium text-[#333A45]"
+                      className="h-[40px] rounded-[12px] border border-[#D8E0EA] bg-white px-2.5 text-[12px] font-medium text-[#333A45] transition-all duration-200 hover:-translate-y-px hover:border-[#C8D1DE] hover:bg-[#F8FAFD] hover:shadow-sm sm:text-[13px]"
                     >
                       {otpCancelText}
                     </button>
@@ -596,36 +773,107 @@ export default function Register({ lang }: { lang: string }) {
                       type="button"
                       onClick={() => void verifyOtp()}
                       disabled={!canVerifyOtp}
-                      className="h-[56px] rounded-[12px] bg-[#FAA500] px-4 text-[16px] font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      className="h-[40px] rounded-[12px] bg-[#FAA500] px-2.5 text-[12px] font-medium text-white shadow-[0_10px_24px_rgba(250,165,0,0.18)] transition-all duration-200 enabled:hover:-translate-y-0.5 enabled:hover:brightness-95 enabled:hover:shadow-[0_16px_34px_rgba(250,165,0,0.24)] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[13px]"
                     >
                       {`${otpVerifyText} (${formatCountdown(otpSecondsLeft)})`}
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-8 flex items-center justify-between text-[15px]">
+                <div className="mt-5 flex items-center justify-between text-[13px] sm:text-[14px]">
                   <Link href={`/${lang}/login`} className="text-[#FAA500]">
                     {otpLoginAnotherText}
                   </Link>
-                  <span className="text-[#5F6572]">{t.login.help}</span>
+                  <button
+                    type="button"
+                    onClick={() => setSupportModalOpen(true)}
+                    className="font-medium text-[#5F6572] transition hover:text-[#333A45]"
+                  >
+                    {t.login.help}
+                  </button>
+                </div>
+              </div>
+            ) : showNotificationScreen ? (
+              <div className="flex w-full flex-col py-4 sm:py-5">
+                <h1 className="text-[25px] font-semibold leading-[1.12] tracking-[-0.04em] text-[#090914] sm:text-[31px]">
+                  {notificationScreenTitle}
+                </h1>
+                <p className="mt-2.5 max-w-[560px] text-[13px] leading-[1.4] text-[#757D8A] sm:text-[14px]">
+                  {notificationScreenSubtitle}
+                </p>
+
+                <div className="mt-5 rounded-[18px] border border-[#E2E8F0] bg-white px-4 py-[18px] shadow-[0_24px_70px_rgba(15,23,42,0.10)] sm:px-6 sm:py-5">
+                  <div className="rounded-[14px] border border-[#E8EDF5] bg-[#F8FAFD] px-4 py-4 text-[13px] leading-6 text-[#616A79] sm:text-[14px]">
+                    {notificationScreenNote}
+                  </div>
+
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={notificationEnabled}
+                    onClick={() => setNotificationEnabled((prev) => !prev)}
+                    className="mt-4 flex w-full items-center justify-between gap-4 rounded-[30px] border border-[#D7DBE3] bg-white px-5 py-4 text-left shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition-all duration-200 hover:border-[#CCD3DE] hover:shadow-[0_14px_28px_rgba(15,23,42,0.08)]"
+                  >
+                    <div className="flex min-w-0 items-center gap-4">
+                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF6E2] text-[#717171]">
+                        <Bell className="h-6 w-6" strokeWidth={2} />
+                      </span>
+                      <span className="truncate text-[15px] font-semibold text-[#1F232B] sm:text-[16px]">
+                        {notificationToggleLabel}
+                      </span>
+                    </div>
+
+                    <span
+                      className={`relative inline-flex h-[42px] w-[92px] shrink-0 items-center rounded-full border transition-all duration-200 ${
+                        notificationEnabled
+                          ? "border-[#FFD08A] bg-[#FFCD7A] shadow-[inset_0_0_0_1px_rgba(255,208,138,0.35)]"
+                          : "border-[#D8DEE8] bg-[#EEF2F7]"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-[32px] w-[32px] rounded-full shadow-[0_4px_14px_rgba(0,0,0,0.16)] transition-transform duration-200 ${
+                          notificationEnabled ? "translate-x-[52px] bg-[#FF9F0A]" : "translate-x-[8px] bg-white"
+                        }`}
+                      />
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void completeNotificationStep()}
+                    disabled={!canFinishNotificationStep}
+                    className="mt-4 h-[44px] w-full rounded-[12px] bg-[#FAA500] px-3 text-[13px] font-medium text-white shadow-[0_10px_24px_rgba(250,165,0,0.18)] transition-all duration-200 enabled:hover:-translate-y-0.5 enabled:hover:brightness-95 enabled:hover:shadow-[0_16px_34px_rgba(250,165,0,0.24)] disabled:cursor-not-allowed disabled:opacity-50 sm:text-[14px]"
+                  >
+                    {busy ? notificationScreenSubmittingText : notificationScreenButtonText}
+                  </button>
+                </div>
+
+                <div className="mt-5 flex items-center justify-end text-[13px] sm:text-[14px]">
+                  <button
+                    type="button"
+                    onClick={() => setSupportModalOpen(true)}
+                    className="font-medium text-[#5F6572] transition hover:text-[#333A45]"
+                  >
+                    {t.login.help}
+                  </button>
                 </div>
               </div>
             ) : (
               <>
                 <div>
-                  <h1 className="text-[44px] font-semibold leading-[1.02] tracking-[-0.04em] text-[#090914] sm:text-[58px]">
+                  <h1 className="text-4xl font-semibold leading-[1.02] tracking-[-0.04em] text-[#090914]">
                     {t.register.titlePrefix ? `${t.register.titlePrefix} ` : ""}
                     <span className="text-[#FAA500]">{t.register.titleHighlight}</span>
                     {t.register.titleSuffix ? ` ${t.register.titleSuffix}` : ""}
                   </h1>
 
-                  <p className="mt-5 max-w-[430px] text-[16px] leading-[1.45] text-[#A1A9B8] sm:text-[19px]">
+                  <p className="mt-4 max-w-[400px] text-[15px] leading-[1.45] text-[#A1A9B8] sm:text-[17px]">
                     {t.register.subtitle}
                   </p>
                 </div>
 
-                <form onSubmit={handleSubmit} className="mt-10 space-y-4">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <form onSubmit={handleSubmit} className="mt-8 space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <input
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
@@ -650,16 +898,18 @@ export default function Register({ lang }: { lang: string }) {
                     autoComplete="email"
                   />
 
-                  <div className="flex min-h-[62px] min-w-0 flex-col rounded-[10px] border border-[#DCE2EA] bg-white md:flex-row md:items-center">
+                  <div className="flex min-h-[54px] min-w-0 flex-col rounded-[10px] border border-[#DCE2EA] bg-white md:flex-row md:items-center">
                     <div
-                      className="relative min-w-0 border-b border-[#E8EDF5] px-2 py-1 md:min-w-[220px] md:max-w-[280px] md:flex-1 md:border-b-0 md:pl-2 md:pr-1"
+                      className="relative min-w-0 border-b border-[#E8EDF5] px-2 py-1 md:min-w-[265px] md:max-w-[340px] md:flex-[1.3] md:border-b-0 md:pl-2 md:pr-1"
                       ref={countryMenuRef}
                     >
                       <button
                         type="button"
                         onClick={() => !countriesLoading && setCountryMenuOpen((prev) => !prev)}
                         disabled={countriesLoading}
-                        className="flex h-[60px] w-full items-center gap-3 rounded-[10px] bg-transparent px-3 text-[14px] text-[#99A2B3] outline-none sm:text-[15px]"
+                        className={`flex h-[52px] w-full items-center gap-2.5 rounded-[10px] bg-transparent px-3 text-[13px] outline-none transition-all duration-200 hover:bg-[#F8FAFD] sm:text-[14px] ${
+                          selectedCountry ? "text-[#090914]" : "text-[#99A2B3]"
+                        }`}
                       >
                         {selectedCountry?.ResimUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -680,7 +930,7 @@ export default function Register({ lang }: { lang: string }) {
                         </span>
                         <ChevronDown
                           size={18}
-                          className={`shrink-0 text-[#99A2B3] transition ${countryMenuOpen ? "rotate-180" : "rotate-0"}`}
+                          className={`shrink-0 transition ${selectedCountry ? "text-[#090914]" : "text-[#99A2B3]"} ${countryMenuOpen ? "rotate-180" : "rotate-0"}`}
                         />
                       </button>
 
@@ -691,7 +941,7 @@ export default function Register({ lang }: { lang: string }) {
                               value={countrySearch}
                               onChange={(e) => setCountrySearch(e.target.value)}
                               placeholder={countrySearchPlaceholder}
-                              className="w-full rounded-[12px] border border-[#E1E7F0] bg-[#F8FAFD] px-3 py-3 text-[14px] text-[#090914] outline-none placeholder:text-[#99A2B3]"
+                              className="w-full rounded-[12px] border border-[#E1E7F0] bg-[#F8FAFD] px-3 py-2.5 text-[13px] text-[#090914] outline-none placeholder:text-[#99A2B3]"
                               autoComplete="off"
                               autoFocus
                             />
@@ -706,11 +956,12 @@ export default function Register({ lang }: { lang: string }) {
                                     type="button"
                                     onClick={() => {
                                       if (item.Id !== phoneCountryId) resetPhoneVerification();
+                                      if (item.Id !== phoneCountryId) setSelectedCityId(null);
                                       setPhoneCountryId(item.Id);
                                       setCountryMenuOpen(false);
                                     }}
-                                    className={`flex w-full items-center gap-3 px-4 py-3 text-left text-[14px] ${
-                                      selected ? "bg-[#F5F7FB] text-[#090914]" : "text-[#4B5565] hover:bg-[#F8FAFD]"
+                                    className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-[13px] transition-colors duration-150 ${
+                                      selected ? "bg-[#F1F4F9] font-medium text-[#090914]" : "text-[#4B5565] hover:bg-[#F8FAFD]"
                                     }`}
                                   >
                                     {item.ResimUrl ? (
@@ -740,11 +991,41 @@ export default function Register({ lang }: { lang: string }) {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder={t.register.placeholders.phone}
-                      className="h-[60px] min-w-0 flex-1 bg-transparent px-4 text-[14px] text-[#090914] outline-none placeholder:text-[#99A2B3] md:px-5 md:text-[15px]"
+                      className="h-[52px] min-w-0 flex-1 bg-transparent px-4 text-[13px] text-[#090914] outline-none placeholder:text-[#99A2B3] md:flex-[0.7] md:px-5 md:text-[14px]"
                       autoComplete="tel"
                     />
                   </div>
                   {countriesError ? <p className="text-sm text-[#D14343]">{countriesError}</p> : null}
+
+                  <div className="relative">
+                    <select
+                      value={selectedCityId ?? ""}
+                      onChange={(e) => {
+                        const next = Number(e.target.value);
+                        setSelectedCityId(Number.isFinite(next) && next > 0 ? next : null);
+                      }}
+                      disabled={!phoneCountryId || citiesLoading || cities.length === 0}
+                      aria-label={selectedCity ? cityDisplay(selectedCity) : cityPlaceholderText}
+                      className={`${fieldClass} appearance-none pr-12 ${
+                        selectedCity ? "text-[#090914]" : "text-[#99A2B3]"
+                      } disabled:cursor-not-allowed disabled:bg-[#F8FAFC] disabled:text-[#A1A9B8]`}
+                    >
+                      <option value="">{citiesLoading ? cityLoadingText : cityPlaceholderText}</option>
+                      {cities.map((item) => (
+                        <option key={item.Id} value={item.Id}>
+                          {cityDisplay(item)}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={18}
+                      className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#99A2B3]"
+                    />
+                  </div>
+                  {citiesError ? <p className="text-sm text-[#D14343]">{citiesError}</p> : null}
+                  {!citiesLoading && !citiesError && phoneCountryId && cities.length === 0 ? (
+                    <p className="text-sm text-[#D14343]">{cityNoResultsText}</p>
+                  ) : null}
 
                   <div className="relative">
                     <input
@@ -758,10 +1039,10 @@ export default function Register({ lang }: { lang: string }) {
                     <button
                       type="button"
                       onClick={() => setShowPw((s) => !s)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[#A1A9B8] hover:text-[#6B7280]"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#A1A9B8] transition-all duration-200 hover:bg-[#F5F7FB] hover:text-[#6B7280]"
                       aria-label={t.login.togglePassword}
                     >
-                      {showPw ? <EyeOff size={20} /> : <Eye size={20} />}
+                      {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
 
@@ -772,16 +1053,16 @@ export default function Register({ lang }: { lang: string }) {
                     <Rule ok={pwRules.symbol} label={t.register.rules.symbol} />
                   </div>
 
-                  <div className="flex items-start gap-3 pt-2 text-[15px] leading-6 text-[#616A79]">
+                  <div className="flex items-start gap-2.5 pt-1 text-[13px] leading-5 text-[#616A79] sm:text-[14px]">
                     <button
                       type="button"
                       onClick={() => setAgree((prev) => !prev)}
                       aria-pressed={agree}
-                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-[4px] border ${
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] border transition-all duration-200 hover:-translate-y-px hover:shadow-sm ${
                         agree ? "border-[#FAA500] bg-[#FAA500] text-white" : "border-[#D6DCE8] bg-white"
                       }`}
                     >
-                      {agree ? <span className="text-[12px] font-semibold leading-none">✓</span> : null}
+                      {agree ? <span className="text-[11px] font-semibold leading-none">✓</span> : null}
                     </button>
                     <span>
                       {t.register.agree.prefix}{" "}
@@ -791,7 +1072,7 @@ export default function Register({ lang }: { lang: string }) {
                           e.preventDefault();
                           void openTermsModal();
                         }}
-                        className="text-[#FAA500] underline underline-offset-2"
+                        className="font-medium text-[#FAA500] underline underline-offset-2 transition-colors duration-200 hover:text-[#DE9300]"
                       >
                         {t.register.agree.terms}
                       </button>
@@ -801,70 +1082,84 @@ export default function Register({ lang }: { lang: string }) {
                   <button
                     type="submit"
                     disabled={!canSendOtp}
-                    className="h-[60px] w-full rounded-[10px] bg-[#FAA500] text-[16px] font-semibold text-white shadow-[0_12px_28px_rgba(250,165,0,0.18)] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-[52px] w-full rounded-[10px] bg-[#FAA500] text-[14px] font-semibold text-white shadow-[0_12px_28px_rgba(250,165,0,0.18)] transition-all duration-200 enabled:hover:-translate-y-0.5 enabled:hover:brightness-95 enabled:hover:shadow-[0_18px_38px_rgba(250,165,0,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {busy ? t.register.buttons.sending : t.register.buttons.continue}
                   </button>
                 </form>
 
-                <div className="mt-8 flex items-center gap-6 text-[#9EA6B3]">
+                <div className="mt-5 flex items-center gap-4 text-[#9EA6B3]">
                   <span className="h-px flex-1 bg-[#E5EAF2]" />
-                  <span className="text-[17px]">{t.login.or}</span>
+                  <span className="text-[16px]">{t.login.or}</span>
                   <span className="h-px flex-1 bg-[#E5EAF2]" />
                 </div>
 
-                <div className="mt-6">
+                <div className="mt-3">
                   <GoogleLoginButton lang={lang} size="large" />
                 </div>
 
-                <div className="pt-5 text-center text-[16px] text-[#9AA3B3]">
-                  {t.register.links.alreadyHave}
-                  <div className="mt-1">
-                    <Link href={`/${lang}/login`} className="text-[#FAA500] underline underline-offset-4">
+                <div className="pt-3 text-center">
+                  <div className="flex items-center justify-center gap-2 text-[15px] text-[#9AA3B3] sm:text-[16px]">
+                    <span>{t.register.links.alreadyHave}</span>
+                    <Link href={`/${lang}/login`} className="font-medium text-[#FAA500] underline underline-offset-4">
                       {t.register.links.login}
                     </Link>
                   </div>
                 </div>
 
-                <div className="mt-auto pt-10 text-center text-[15px] text-[#5F6572]">{t.login.help}</div>
+                <div className="pt-5 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setSupportModalOpen(true)}
+                    className="text-[15px] font-medium text-[#5F6572] transition-colors duration-200 hover:text-[#333A45] sm:text-[16px]"
+                  >
+                    {t.login.help}
+                  </button>
+                </div>
               </>
             )}
           </div>
         </div>
 
-        {!showOtpScreen ? (
-          <div className="relative hidden overflow-hidden border-b border-[#E7ECF4] bg-[#F7F9FD] lg:block">
+        {!showCompactScreen ? (
           <div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(circle at 35% 12%, rgba(255,255,255,0.96) 0, rgba(255,255,255,0.9) 12%, rgba(255,255,255,0) 34%), radial-gradient(circle at 44% 28%, rgba(70,94,255,0.12) 0, rgba(70,94,255,0) 28%), linear-gradient(180deg, #F9FBFF 0%, #F3F6FC 100%)",
-            }}
-          />
-          <div className="relative flex min-h-[920px] flex-col px-10 pt-[2px] pb-12 xl:px-20">
-            <div
-              className="mx-auto h-[600px] w-full max-w-[780px] bg-[url('/assets/images/_gtg_new/Login_right2.svg')] bg-[length:95%] bg-no-repeat"
-              style={{ backgroundPosition: "center 2px" }}
-            />
-
-            <div className="mt-6 flex items-center justify-center gap-6 xl:gap-8">
-              <div className="inline-flex h-14 w-[188px] shrink-0 items-center justify-center gap-3 overflow-hidden rounded-md border border-black/5 bg-black px-3 py-2 shadow-sm">
+            className="relative hidden min-h-[320px] overflow-hidden bg-[#F3F5F9] lg:sticky lg:top-0 lg:block lg:h-screen"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,199,255,0.24),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(255,118,1,0.22),transparent_32%),linear-gradient(180deg,#f8fbff_0%,#eef4fb_100%)]" />
+            <div className="relative z-10 flex h-full flex-col items-center justify-center px-10 pb-40 pt-16">
+              <div className="relative aspect-square w-full max-w-[330px]">
                 <Image
-                  src="/assets/images/_gtg_new/Google-Play-logo.svg"
+                  src="/assets/images/babroo/logo-mark.png"
+                  alt={t.common.appName}
+                  fill
+                  sizes="330px"
+                  className="object-contain drop-shadow-[0_24px_60px_rgba(17,24,39,0.14)]"
+                  priority
+                />
+              </div>
+              <div className="relative -mt-10 aspect-[670/172] w-full max-w-[340px]">
+                <Image
+                  src="/assets/images/babroo/logo-wordmark.png"
+                  alt={t.common.appName}
+                  fill
+                  sizes="340px"
+                  className="object-contain"
+                  priority
+                />
+              </div>
+            </div>
+
+            <div className="absolute inset-x-0 bottom-52 flex items-center justify-center gap-8">
+              <div className="inline-flex h-12 w-40 shrink-0 items-center justify-center gap-3 overflow-hidden rounded-xl border border-white/20 bg-black/90 px-3 py-2 shadow-sm">
+                <Image
+                  src="/assets/images/_gtg_new/Apple-logo.svg"
                   alt=""
                   aria-hidden="true"
-                  width={28}
-                  height={32}
-                  className="h-7 w-auto shrink-0"
+                  width={22}
+                  height={26}
+                  className="h-6 w-auto shrink-0"
+                  style={{ width: "auto" }}
                 />
-                <div className="flex min-w-0 flex-col gap-1">
-                  <span className="text-[11px] font-semibold tracking-widest text-white/80">Get it on</span>
-                  <Image src="/assets/images/_gtg_new/Google-Play.svg" alt="" aria-hidden="true" width={120} height={22} className="h-5 w-auto max-w-full" />
-                </div>
-              </div>
-
-              <div className="inline-flex h-14 w-[188px] shrink-0 items-center justify-center gap-3 overflow-hidden rounded-md border border-black/5 bg-black px-3 py-2 shadow-sm">
-                <Image src="/assets/images/_gtg_new/Apple-logo.svg" alt="" aria-hidden="true" width={22} height={26} className="h-7 w-auto shrink-0" />
                 <div className="flex min-w-0 flex-col gap-1">
                   <Image
                     src="/assets/images/_gtg_new/Download-on-the.svg"
@@ -873,60 +1168,100 @@ export default function Register({ lang }: { lang: string }) {
                     width={96}
                     height={10}
                     className="h-2.5 w-auto max-w-full"
+                    style={{ width: "auto" }}
                   />
-                  <Image src="/assets/images/_gtg_new/App-Store.svg" alt="" aria-hidden="true" width={104} height={22} className="h-5 w-auto max-w-full" />
+                  <Image
+                    src="/assets/images/_gtg_new/App-Store.svg"
+                    alt=""
+                    aria-hidden="true"
+                    width={104}
+                    height={22}
+                    className="h-4 w-auto max-w-full"
+                    style={{ width: "auto" }}
+                  />
+                </div>
+              </div>
+
+              <div className="inline-flex h-12 w-40 shrink-0 items-center justify-center gap-3 overflow-hidden rounded-xl border border-white/20 bg-black/90 px-3 py-2 shadow-sm">
+                <Image
+                  src="/assets/images/_gtg_new/Google-Play-logo.svg"
+                  alt=""
+                  aria-hidden="true"
+                  width={28}
+                  height={32}
+                  className="h-6 w-auto shrink-0"
+                  style={{ width: "auto" }}
+                />
+                <div className="flex min-w-0 flex-col gap-1">
+                  <span className="text-[12px] font-semibold tracking-widest text-white/80">Get it on</span>
+                  <Image
+                    src="/assets/images/_gtg_new/Google-Play.svg"
+                    alt=""
+                    aria-hidden="true"
+                    width={120}
+                    height={22}
+                    className="h-4 w-auto max-w-full"
+                    style={{ width: "auto" }}
+                  />
                 </div>
               </div>
             </div>
-          </div>
           </div>
         ) : null}
       </main>
 
-      <footer className="border-t border-[#E7ECF4] bg-[#F5F8FD]">
-        <div className="mx-auto max-w-[1600px] px-6 pt-14 pb-16 lg:px-10">
-          <div className="grid items-start grid-cols-1 gap-y-8 md:grid-cols-4 md:gap-x-10">
-            <div className="md:col-span-1">
-              <div className="flex items-center gap-2">
-                <BrandHeader height={43} label={t.common.appName} />
-              </div>
-              <p className="mt-4 max-w-[320px] text-[16px] leading-[30px] text-[#71717A]">{t.footer.introText}</p>
-            </div>
+      <FooterMain lang={currentLang} />
 
-            <div>
-              <div className="text-[13px] font-semibold uppercase tracking-widest text-[#94A3B8]">{t.footer.companyTitle}</div>
-              <ul className="mt-6 space-y-5 text-[16px] font-medium text-[#090914]">
-                <li>{t.footer.about}</li>
-                <li>{t.footer.features}</li>
-                <li>{t.footer.works}</li>
-                <li>{t.footer.career}</li>
-              </ul>
-            </div>
+      {supportModalOpen ? (
+        <div
+          className="fixed inset-0 z-[145] flex items-center justify-center bg-black/45 px-4 py-8 backdrop-blur-[3px]"
+          onClick={() => setSupportModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-[720px] rounded-[28px] border border-[#EAE3D7] bg-white px-6 py-6 shadow-[0_30px_80px_rgba(17,24,39,0.22)] sm:px-8 sm:py-7"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="register-support-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSupportModalOpen(false)}
+              className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D7DCE3] bg-white text-[#8A8A8A] shadow-[0_8px_20px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-px hover:bg-[#F8FAFC] hover:shadow-[0_14px_28px_rgba(15,23,42,0.12)]"
+              aria-label={closeText}
+            >
+              <X className="h-6 w-6" strokeWidth={1.8} />
+            </button>
 
-            <div>
-              <div className="text-[13px] font-semibold uppercase tracking-widest text-[#94A3B8]">{t.footer.helpTitle}</div>
-              <ul className="mt-6 space-y-5 text-[16px] font-medium text-[#090914]">
-                <li>{t.footer.customerSupport}</li>
-                <li className="text-[#FAA500]">{t.footer.deliveryDetails}</li>
-                <li>{t.footer.terms}</li>
-                <li>{t.footer.privacy}</li>
-              </ul>
-            </div>
+            <h2 id="register-support-modal-title" className="pr-10 text-[22px] font-semibold leading-tight text-[#2A2D33] sm:text-[24px]">
+              {supportTitle}
+            </h2>
+            <p className="mt-3 text-[16px] leading-[1.35] text-[#97A1AE] sm:text-[17px]">{supportSubtitle}</p>
 
-            <div>
-              <div className="text-[13px] font-semibold uppercase tracking-widest text-[#94A3B8]">{t.footer.newsletterTitle}</div>
-              <div className="mt-6 space-y-4">
-                <div className="flex h-[58px] items-center rounded-[10px] border border-[#E4EAF2] bg-white px-5 text-[16px] text-[#A1A1AA]">
-                  {t.footer.enterEmail}
-                </div>
-                <button className="h-[58px] w-full rounded-[10px] bg-[#FAA500] text-[16px] font-medium text-white">
-                  {t.footer.subscribe}
-                </button>
-              </div>
+            <div className="mt-7 grid gap-4 md:grid-cols-2">
+              <a
+                href={supportWhatsappHref}
+                target="_blank"
+                rel="noreferrer"
+                className="group flex items-center justify-center gap-3 rounded-2xl border border-[#FAA500] bg-[#FAA500] px-5 py-4 text-[16px] font-semibold text-white shadow-[0_10px_24px_rgba(250,165,0,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E89A00] hover:shadow-[0_18px_36px_rgba(232,154,0,0.34)] active:translate-y-0 active:shadow-[0_10px_24px_rgba(250,165,0,0.28)] sm:text-[17px]"
+              >
+                <WhatsAppIcon className="h-6 w-6 shrink-0 text-white" />
+                <span>{t.support.whatsapp}</span>
+                <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </a>
+
+              <a
+                href={supportMailHref}
+                className="group flex items-center justify-center gap-3 rounded-2xl border border-[#FAA500] bg-[#FAA500] px-5 py-4 text-[16px] font-semibold text-white shadow-[0_10px_24px_rgba(250,165,0,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E89A00] hover:shadow-[0_18px_36px_rgba(232,154,0,0.34)] active:translate-y-0 active:shadow-[0_10px_24px_rgba(250,165,0,0.28)] sm:text-[17px]"
+              >
+                <Mail className="h-6 w-6" />
+                <span>{t.support.mail}</span>
+                <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" />
+              </a>
             </div>
           </div>
         </div>
-      </footer>
+      ) : null}
 
       {errorModal ? (
         <div className="fixed inset-0 z-[145] flex items-center justify-center bg-black/45 px-4 py-8" onClick={() => setErrorModal(null)}>
@@ -940,7 +1275,7 @@ export default function Register({ lang }: { lang: string }) {
             <button
               type="button"
               onClick={() => setErrorModal(null)}
-              className="absolute right-5 top-5 rounded-full p-1 text-[#8B93A1] transition hover:bg-black/5"
+              className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#E2E8F0] bg-white p-1 text-[#8B93A1] shadow-[0_8px_20px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-px hover:bg-[#F8FAFC] hover:shadow-[0_14px_28px_rgba(15,23,42,0.12)]"
               aria-label={closeText}
             >
               <X className="h-6 w-6" strokeWidth={1.8} />
@@ -955,7 +1290,7 @@ export default function Register({ lang }: { lang: string }) {
               <button
                 type="button"
                 onClick={() => setErrorModal(null)}
-                className="min-w-[120px] rounded-[10px] bg-[#FAA500] px-5 py-3 text-[16px] font-medium text-white transition hover:brightness-95"
+                className="min-w-[120px] rounded-[10px] bg-[#FAA500] px-5 py-3 text-[16px] font-medium text-white shadow-[0_12px_28px_rgba(250,165,0,0.18)] transition-all duration-200 hover:-translate-y-0.5 hover:brightness-95 hover:shadow-[0_18px_38px_rgba(250,165,0,0.24)]"
               >
                 {closeText}
               </button>
@@ -976,7 +1311,7 @@ export default function Register({ lang }: { lang: string }) {
             <button
               type="button"
               onClick={() => setTermsOpen(false)}
-              className="absolute right-5 top-5 rounded-full p-1 text-[#8B93A1] transition hover:bg-black/5"
+              className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#E2E8F0] bg-white p-1 text-[#8B93A1] shadow-[0_8px_20px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-px hover:bg-[#F8FAFC] hover:shadow-[0_14px_28px_rgba(15,23,42,0.12)]"
               aria-label={closeText}
             >
               <X className="h-6 w-6" strokeWidth={1.8} />
@@ -1001,7 +1336,7 @@ export default function Register({ lang }: { lang: string }) {
               <button
                 type="button"
                 onClick={() => setTermsOpen(false)}
-                className="min-w-[110px] rounded-[10px] border border-[#CDD6E3] bg-white px-5 py-3 text-[16px] font-medium text-[#7B8494] transition hover:border-[#B8C4D9]"
+                className="min-w-[110px] rounded-[10px] border border-[#CDD6E3] bg-white px-5 py-3 text-[16px] font-medium text-[#7B8494] transition-all duration-200 hover:-translate-y-px hover:border-[#B8C4D9] hover:bg-[#F8FAFD] hover:shadow-sm"
               >
                 {declineText}
               </button>
@@ -1012,7 +1347,7 @@ export default function Register({ lang }: { lang: string }) {
                   setTermsOpen(false);
                 }}
                 disabled={termsLoading || !!termsError || !termsHtml}
-                className="min-w-[110px] rounded-[10px] bg-[#FAA500] px-5 py-3 text-[16px] font-medium text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-w-[110px] rounded-[10px] bg-[#FAA500] px-5 py-3 text-[16px] font-medium text-white shadow-[0_12px_28px_rgba(250,165,0,0.18)] transition-all duration-200 enabled:hover:-translate-y-0.5 enabled:hover:brightness-95 enabled:hover:shadow-[0_18px_38px_rgba(250,165,0,0.24)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {acceptText}
               </button>

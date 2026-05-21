@@ -7,7 +7,7 @@ import { Modal } from "@/components/gtg/Modal";
 import { Subscription } from "@/components/gtg/Subscription";
 import { useState } from "react";
 
-export function AboutPage({ lang }: { lang: "tr" | "en" }) {
+export function AboutPage({ lang }: { lang: string }) {
   const t = useTranslate();
   const [isActive, setIsActive] = useState(false);
   const date = new Date().getFullYear() - 2006;
@@ -155,10 +155,18 @@ export function AboutPage({ lang }: { lang: "tr" | "en" }) {
       <Subscription lang={lang} />
 
       <Modal active={isActive} onClose={() => setIsActive(false)}>
-        <iframe width="100%" height="100%" src={videoLink}></iframe>
-        <button onClick={() => setIsActive(false)} className="absolute top-[2%] right-[2%] bg-white text-gray-500 size-8 rounded-full">
-          <span className="mdi mdi-close"></span>
-        </button>
+        <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black shadow-2xl">
+          <iframe
+            width="100%"
+            height="100%"
+            src={videoLink}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          ></iframe>
+          <button onClick={() => setIsActive(false)} className="absolute top-2 right-2 bg-white text-gray-500 size-8 rounded-full z-20">
+            <span className="mdi mdi-close"></span>
+          </button>
+        </div>
       </Modal>
     </>
   );

@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { proxyJson } from "@/lib/server/proxy";
 
 function normalizeDil(value: string | null): number {
-  return value === "2" ? 2 : 1;
+  const parsed = Number(value ?? 1);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : 1;
 }
 
 export async function GET(req: Request) {
@@ -19,7 +20,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "Bearer token is required" }, { status: 401 });
   }
 
-  const pathBase = process.env.STORE_GET_ALL_PATH ?? "/api/Paket/getall";
+  const pathBase = process.env.STORE_GET_ALL_PATH ?? "/api/Paket/getall-web";
   const qp = new URLSearchParams({ dil: String(dil) });
   const path = `${pathBase}?${qp.toString()}`;
   const { res, data } = await proxyJson({ path, method: "GET" });

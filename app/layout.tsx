@@ -20,15 +20,18 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "GoTradeGo",
-  description: "GoTradeGo",
+  title: "Babroo",
+  description: "Babroo",
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="tr" dir="ltr" className={`light scroll-smooth ${poppins.variable} ${nunito.variable}`} suppressHydrationWarning>
+    <html lang="tr" dir="ltr" data-scroll-behavior="smooth" className={`light scroll-smooth ${poppins.variable} ${nunito.variable}`} suppressHydrationWarning>
       <head>
-        <link rel="icon" href="/favicon.ico" />
         <link href="/assets/libs/tiny-slider/tiny-slider.css" rel="stylesheet" />
         <link href="/assets/libs/@iconscout/unicons/css/line.css" rel="stylesheet" />
         <link href="/assets/libs/@mdi/font/css/materialdesignicons.min.css" rel="stylesheet" />

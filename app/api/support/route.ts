@@ -6,7 +6,8 @@ const SUPPORT_MESSAGE_MIN_LENGTH = 3;
 const SUPPORT_MESSAGE_MAX_LENGTH = 255;
 
 function normalizeDil(value: string | null): number {
-  return value === "2" ? 2 : 1;
+  const parsed = Number(value ?? 1);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : 1;
 }
 
 function normalizeKaynak(value: string | null): number {

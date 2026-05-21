@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
+import { NotificationsModal } from "@/components/layout/NotificationsModal";
 import { Sidebar } from "@/components/layout/Sidebar";
 
 type HomeShellProps = {
@@ -13,6 +14,7 @@ type HomeShellProps = {
 export function HomeShell({ lang, children }: HomeShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -20,8 +22,12 @@ export function HomeShell({ lang, children }: HomeShellProps) {
 
   return (
     <div className="min-h-screen bg-[#f3f3f5]">
-      <div className="flex min-h-screen">
-        <Sidebar lang={lang} />
+      <div className="flex min-h-screen overflow-x-hidden">
+        <Sidebar
+          lang={lang}
+          notificationsOpen={notificationsOpen}
+          onOpenNotifications={() => setNotificationsOpen(true)}
+        />
 
         <button
           type="button"
@@ -47,10 +53,17 @@ export function HomeShell({ lang, children }: HomeShellProps) {
           mobileOpen={mobileOpen}
           onClose={() => setMobileOpen(false)}
           onNavigate={() => setMobileOpen(false)}
+          notificationsOpen={notificationsOpen}
+          onOpenNotifications={() => {
+            setNotificationsOpen(true);
+            setMobileOpen(false);
+          }}
         />
 
-        <main className="min-w-0 flex-1">{children}</main>
+        <main className="gtg-home-mobile-spacer min-w-0 flex-1 overflow-x-hidden">{children}</main>
       </div>
+
+      <NotificationsModal lang={lang} open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
     </div>
   );
 }

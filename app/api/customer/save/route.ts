@@ -6,7 +6,8 @@ const NAME_MIN_LENGTH = 2;
 const NAME_MAX_LENGTH = 100;
 
 function normalizeDil(value: string | null): number {
-  return value === "2" ? 2 : 1;
+  const parsed = Number(value ?? 1);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : 1;
 }
 
 function normalizeKaynak(value: string | null): number {
@@ -20,6 +21,11 @@ function sanitizeText(value: unknown): string {
 
 function isValidName(value: string): boolean {
   return value.length >= NAME_MIN_LENGTH && value.length <= NAME_MAX_LENGTH;
+}
+
+function normalizePositiveInt(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
 }
 
 export async function POST(req: Request) {
@@ -47,10 +53,11 @@ export async function POST(req: Request) {
 
   const ad = sanitizeText(body?.ad);
   const soyad = sanitizeText(body?.soyad);
+  const ilNr = normalizePositiveInt(body?.ilNr);
 
-  if (!ad || !soyad) {
+  if (!ad || !soyad || ilNr == null) {
     return NextResponse.json(
-      { message: "Both ad and soyad are required" },
+      { message: "ad, soyad and ilNr are required" },
       { status: 400 }
     );
   }
@@ -76,7 +83,7 @@ export async function POST(req: Request) {
   const { res, data } = await proxyJson({
     path,
     method: "POST",
-    body: { ad, soyad },
+    body: { ad, soyad, ilNr },
   });
 
   if (!res.ok) {

@@ -1,27 +1,28 @@
 {
-  "name": "gotradegowebapp",
+  "name": "babroowebapp",
   "version": "0.1.0",
   "private": true,
   "engines": {
     "node": ">=20.20.0 <21"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
+    "dev:https": "next dev -p 3001 --experimental-https",
     "build": "next build",
     "build:iis": "next build && node scripts/iis-release.mjs",
     "package:iis": "powershell -ExecutionPolicy Bypass -File ./scripts/package-iis.ps1",
     "build:iis:zip": "npm run build:iis && npm run package:iis",
     "iis:configure": "powershell -ExecutionPolicy Bypass -File ./scripts/configure-iis.ps1",
-    "start": "next start",
+    "start": "next start -p 3001",
     "lint": "next lint"
   },
   "dependencies": {
     "clsx": "^2.1.1",
     "feather-icons": "^4.29.2",
     "lucide-react": "^0.461.0",
-    "next": "^16.1.6",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "next": "^16.2.2",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
     "react-google-recaptcha": "^3.1.0",
     "sweetalert2": "^11.14.3",
     "tiny-slider": "^2.9.4"

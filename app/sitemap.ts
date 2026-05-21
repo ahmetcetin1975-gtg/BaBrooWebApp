@@ -1,9 +1,8 @@
 ﻿import type { MetadataRoute } from "next";
-
-const LANGS = ["tr", "en"] as const;
+import { LANGS } from "@/lib/i18n/languages";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://gotradego.com";
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://babroo.com";
   const now = new Date();
 
   const paths = [
@@ -16,7 +15,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/faqs",
     "/team",
     "/kvkk",
-    "/user-register-select",
     "/landing/import-export",
     "/landing/expert",
     "/blogs/1",
@@ -37,5 +35,4 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return urls;
 }
-
 

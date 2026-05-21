@@ -1,0 +1,38 @@
+import { cookies, headers } from "next/headers";
+import { NextResponse } from "next/server";
+import { proxyJson } from "@/lib/server/proxy";
+
+function normalizeDil(value: string | null): number {
+  const parsed = Number(value ?? 1);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : 1;
+}
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const dil = normalizeDil(searchParams.get("dil"));
+  const grupSecenekId = (searchParams.get("grupSecenekId") ?? "").trim();
+
+  const h = await headers();
+  const jar = await cookies();
+  const hasBearerHeader = (h.get("authorization") ?? "").trim() !== "";
+  const hasCookieToken = (jar.get("gtg_access")?.value ?? "").trim() !== "";
+
+  if (!hasBearerHeader && !hasCookieToken) {
+    return NextResponse.json({ message: "Bearer token is required" }, { status: 401 });
+  }
+
+  const pathBase = process.env.CUSTOMER_FEATURE_OPTIONS_PATH ?? "/api/Main/GetSecenekler";
+  const qp = new URLSearchParams({ dil: String(dil) });
+  if (grupSecenekId) qp.set("grupSecenekId", grupSecenekId);
+  const path = `${pathBase}?${qp.toString()}`;
+  const { res, data } = await proxyJson({ path, method: "GET" });
+
+  if (!res.ok) {
+    return NextResponse.json(
+      { message: data?.message ?? "Failed to load feature options", ...data },
+      { status: res.status }
+    );
+  }
+
+  return NextResponse.json(data);
+}

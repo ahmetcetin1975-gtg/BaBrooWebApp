@@ -1,5 +1,5 @@
 ﻿export const environment = {
-  systemUrl: "https://apitest.gotradego.com/api/",
+  systemUrl: "http://localhost:8081/api/",
   recaptcha: {
     siteKey: "6LfazGcqAAAAADPWWFlOldiYJyqg0xnqdSFSNJML",
   },
@@ -7,23 +7,30 @@
 };
 
 export const BaseAppConfig = {
-  appName: "GoTradeGo",
-  oldAppImagePath: "https://test1.gotradego.com/GTG_IMAGES/icerikResimler/",
-  companyLogoDark: "/assets/images/gotradego/logo-white.png",
-  companyLogoLight: "/assets/images/gotradego/logo-black.png",
-  splash: "/assets/images/gotradego/splash.png",
-  mainAppUrl: "https://test1.gotradego.com",
-  imagePath: "/assets/images/gotradego/",
-  imagePathFromSrc: "/src/assets/images/gotradego/",
+  appName: "Babroo",
+  oldAppImagePath: "https://test1.babroo.com/GTG_IMAGES/icerikResimler/",
+  companyLogoDark: "/assets/images/babroo/logo-white.png",
+  companyLogoLight: "/assets/images/babroo/logo-black.png",
+  splash: "/assets/images/babroo/splash.png",
+  mainAppUrl: "https://test1.babroo.com",
+  imagePath: "/assets/images/babroo/",
+  imagePathFromSrc: "/src/assets/images/babroo/",
   locale: "tr-TR",
   lang: "en",
 };
 
-export const LANGS = ["tr", "en"] as const;
-export type Lang = (typeof LANGS)[number];
-
-export function normalizeLang(lang: string): Lang {
-  return (LANGS as readonly string[]).includes(lang) ? (lang as Lang) : "tr";
-}
-
+export {
+  DIL_BY_LANG,
+  LANGS,
+  LANG_SEGMENT,
+  LANGUAGE_LABELS,
+  LOCALE_BY_LANG,
+  dilToLang,
+  langToDil,
+  localeForLang,
+  normalizeDil,
+  normalizeLang,
+  type Dil,
+  type Lang,
+} from "@/lib/i18n/languages";
 

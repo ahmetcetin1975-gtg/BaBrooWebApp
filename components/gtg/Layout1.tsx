@@ -5,17 +5,63 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import feather from "feather-icons";
 import clsx from "clsx";
-import { BaseAppConfig } from "@/lib/gtg/config";
+import { BaseAppConfig, type Lang } from "@/lib/gtg/config";
 import { useTranslate } from "@/components/gtg/TranslationProvider";
-import { persistLanguagePreference } from "@/lib/i18n/client-language";
-
-const LANG_FLAGS = {
-  en: "/assets/images/united-states.png",
-  tr: "/assets/images/turkey.png",
-} as const;
+import { LanguageSwitch } from "@/components/i18n/LanguageSwitch";
+import { api } from "@/lib/api/client";
 
 type Layout1Props = {
-  lang: "tr" | "en";
+  lang: Lang;
+};
+
+const NAVIGATION_LABELS: Record<Lang, {
+  home: string;
+  services: string;
+  blog: string;
+  howItWorks: string;
+  faq: string;
+  contact: string;
+}> = {
+  tr: {
+    home: "Anasayfa",
+    services: "Hizmetler",
+    blog: "Blog",
+    howItWorks: "Nasıl Çalışır",
+    faq: "SSS",
+    contact: "İletişim",
+  },
+  en: {
+    home: "Home",
+    services: "Services",
+    blog: "Blog",
+    howItWorks: "How It Works",
+    faq: "FAQ",
+    contact: "Contact",
+  },
+  ru: {
+    home: "Главная",
+    services: "Услуги",
+    blog: "Блог",
+    howItWorks: "Как это работает",
+    faq: "FAQ",
+    contact: "Контакты",
+  },
+  es: {
+    home: "Inicio",
+    services: "Servicios",
+    blog: "Blog",
+    howItWorks: "Cómo funciona",
+    faq: "FAQ",
+    contact: "Contacto",
+  },
+  fr: {
+    home: "Accueil",
+    services: "Services",
+    blog: "Blog",
+    howItWorks: "Fonctionnement",
+    faq: "FAQ",
+    contact: "Contact",
+  },
 };
 
 export function Layout1({ lang }: Layout1Props) {
@@ -23,30 +69,85 @@ export function Layout1({ lang }: Layout1Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState<string>("");
+  const [loginChecking, setLoginChecking] = useState(false);
+  const navLabels = NAVIGATION_LABELS[lang];
 
   const activePath = useMemo(() => {
     if (!pathname) {
       return "/";
     }
-    const normalized = pathname.replace(/^\/(tr|en)/, "") || "/";
+    const normalized = pathname.replace(/^\/(tr|en|ru|es|fr)/, "") || "/";
     return normalized === "" ? "/" : normalized;
   }, [pathname]);
+
+  const shouldUseNavyNavbar = useMemo(() => {
+    const currentPath = pathname ?? "";
+    return (
+      /^\/(tr|en|ru|es|fr)\/?$/.test(currentPath) ||
+      /^\/(tr|en|ru|es|fr)\/bakici-bul$/.test(currentPath) ||
+      /^\/(tr|en|ru|es|fr)\/blog(?:\/.*)?$/.test(currentPath) ||
+      /^\/(tr|en|ru|es|fr)\/blog-detail(?:\/.*)?$/.test(currentPath)
+    );
+  }, [pathname]);
+
+  const navigationItems = useMemo(
+    () => [
+      {
+        label: navLabels.home,
+        href: `/${lang}/`,
+        active: activePath === "/",
+      },
+      {
+        label: navLabels.services,
+        href: `/${lang}/bakici-bul`,
+        active: activePath === "/bakici-bul",
+      },
+      {
+        label: navLabels.blog,
+        href: `/${lang}/blog`,
+        active: activePath === "/blog" || activePath.startsWith("/blog/"),
+      },
+      {
+        label: navLabels.howItWorks,
+        href: `/${lang}/#process`,
+        active: false,
+      },
+      {
+        label: navLabels.faq,
+        href: `/${lang}/#faq`,
+        active: activePath === "/faqs",
+      },
+      {
+        label: navLabels.contact,
+        href: `/${lang}/contact`,
+        active: activePath === "/contact",
+      },
+    ],
+    [activePath, lang, navLabels]
+  );
 
   useEffect(() => {
     feather.replace();
   }, []);
 
   useEffect(() => {
+    closeMenus();
+  }, [pathname]);
+
+  useEffect(() => {
     const navbar = document.getElementById("topnav");
     if (!navbar) {
       return;
     }
-    const isHome = /^\/(tr|en)\/?$/.test(pathname ?? "");
-    if (isHome && !document.documentElement.className.includes("dark")) {
+    if (shouldUseNavyNavbar) {
       navbar.classList.remove("dark");
+      navbar.classList.add("navy-surface");
+      return;
     }
-  }, [pathname]);
+
+    navbar.classList.remove("navy-surface");
+    navbar.classList.add("dark");
+  }, [shouldUseNavyNavbar]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -56,13 +157,19 @@ export function Layout1({ lang }: Layout1Props) {
       }
       if (document.body.scrollTop >= 50 || document.documentElement.scrollTop > 50) {
         navbar.classList.add("nav-sticky");
-        if (!document.documentElement.className.includes("dark") && (pathname?.length ?? 0) > 5 && window.innerWidth > 1300) {
+        if (shouldUseNavyNavbar) {
+          navbar.classList.remove("dark");
+          navbar.classList.add("navy-surface");
+        } else if (!document.documentElement.className.includes("dark") && (pathname?.length ?? 0) > 5 && window.innerWidth > 1300) {
           navbar.classList.remove("dark");
         }
       } else {
         const errorImage = document.querySelector('img[src="assets/images/error.png"]');
         navbar.classList.remove("nav-sticky");
-        if (!document.documentElement.className.includes("dark") && (pathname?.length ?? 0) > 5 && window.innerWidth > 1300 && !(pathname ?? "").includes("landing") && !errorImage) {
+        if (shouldUseNavyNavbar) {
+          navbar.classList.remove("dark");
+          navbar.classList.add("navy-surface");
+        } else if (!document.documentElement.className.includes("dark") && (pathname?.length ?? 0) > 5 && window.innerWidth > 1300 && !(pathname ?? "").includes("landing") && !errorImage) {
           navbar.classList.add("dark");
         }
       }
@@ -82,16 +189,46 @@ export function Layout1({ lang }: Layout1Props) {
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [pathname]);
+  }, [pathname, shouldUseNavyNavbar]);
 
-  const handleLanguageChange = (target: "tr" | "en") => {
-    persistLanguagePreference(target);
-    const newPath = (pathname ?? "/").replace(/^\/(tr|en)/, `/${target}`);
-    router.push(newPath);
+  const closeMenus = () => {
+    setIsOpen(false);
+  };
+
+  const toggleNavigation = () => {
+    setIsOpen((prev) => !prev);
+  };
+
+  const handleLoginClick = async () => {
+    if (loginChecking) return;
+
+    setLoginChecking(true);
+
+    try {
+      const session = await api.get<{ user: unknown | null }>("/api/auth/session");
+      if (session?.user) {
+        router.push(`/${lang}/home`);
+        return;
+      }
+
+      try {
+        await api.post("/api/auth/refresh", {});
+      } catch {
+        router.push(`/${lang}/login`);
+        return;
+      }
+
+      const refreshedSession = await api.get<{ user: unknown | null }>("/api/auth/session");
+      router.push(refreshedSession?.user ? `/${lang}/home` : `/${lang}/login`);
+    } catch {
+      router.push(`/${lang}/login`);
+    } finally {
+      setLoginChecking(false);
+    }
   };
 
   return (
-    <nav id="topnav" className="defaultscroll is-sticky dark" onScrollCapture={() => undefined}>
+    <nav id="topnav" className={clsx("defaultscroll is-sticky", shouldUseNavyNavbar ? "navy-surface" : "dark")} onScrollCapture={() => undefined}>
       <div className="container relative">
         <Link className="logo logo2" href={`/${lang}/`}>
           <img
@@ -114,7 +251,10 @@ export function Layout1({ lang }: Layout1Props) {
             <button
               className={clsx("navbar-toggle", isOpen && "open")}
               id="isToggle"
-              onClick={() => setIsOpen((prev) => !prev)}
+              type="button"
+              aria-expanded={isOpen}
+              aria-controls="navigation"
+              onClick={toggleNavigation}
             >
               <div className="lines">
                 <span></span>
@@ -126,132 +266,47 @@ export function Layout1({ lang }: Layout1Props) {
         </div>
 
         <ul className="buy-button list-none mb-0">
-          <li className="inline ps-1 mb-0">
-            <Link
-              href={`/${lang}/register`}
-              //href={`/${lang}/user-register-select`}
-              title={t("LCOD_LBL_REGISTER")}
-              className="size-9 inline-flex items-center justify-center tracking-wide align-middle duration-500 text-base text-center rounded-full bg-orange-500 hover:bg-blue-700 text-white"
-            >
-              <i data-feather="user-plus" className="size-4"></i>
+            <li className="inline ps-1 mb-0">
+              <Link
+                href={`/${lang}/register`}
+                title={t("LCOD_LBL_REGISTER")}
+                onClick={closeMenus}
+                className="size-9 inline-flex items-center justify-center tracking-wide align-middle duration-500 text-base text-center rounded-full bg-orange-500 hover:bg-blue-700 text-white"
+              >
+                <i data-feather="user-plus" className="size-4"></i>
             </Link>
           </li>
           <li className="inline mb-0">
-            <a
-              href={`/${lang}/login`}
-              //target="_blank"
-              //href={`${BaseAppConfig.mainAppUrl}/app.gotradego/seller/auth-login.html`}
-              //target="_blank"
+            <button
+              type="button"
+              onClick={() => void handleLoginClick()}
               title={t("LCOD_LBL_LOGIN")}
               className="size-9 inline-flex items-center justify-center tracking-wide align-middle duration-500 text-base text-center rounded-full bg-blue-700 hover:bg-orange-500 text-white"
-              rel="noreferrer"
+              aria-busy={loginChecking}
+              disabled={loginChecking}
             >
               <i data-feather="log-in" className="size-4"></i>
-            </a>
+            </button>
           </li>
-          {lang === "en" ? (
-            <li className="inline ps-1 mb-0">
-              <button
-                onClick={() => handleLanguageChange("tr")}
-                className="size-9 inline-flex items-center justify-center tracking-wide align-middle duration-500 text-base text-center rounded-full bg-blue-700 hover:bg-orange-700 text-white hover:cursor-pointer"
-                type="button"
-              >
-                <img alt="Turkey" src={LANG_FLAGS.tr} height={512} width={512} />
-              </button>
-            </li>
-          ) : (
-            <li className="inline ps-1 mb-0">
-              <button
-                onClick={() => handleLanguageChange("en")}
-                className="size-9 inline-flex items-center justify-center tracking-wide align-middle duration-500 text-base text-center rounded-full text-white hover:cursor-pointer"
-                type="button"
-              >
-                <img alt="United States" src={LANG_FLAGS.en} height={512} width={512} />
-              </button>
-            </li>
-          )}
+          <li className="inline ps-1 mb-0">
+            <LanguageSwitch
+              lang={lang}
+              showLabel={false}
+              className="align-middle"
+              pillClassName="h-9 border-neutral-200 bg-white px-2.5 text-neutral-900 shadow-sm hover:border-neutral-300 hover:bg-neutral-50"
+            />
+          </li>
         </ul>
 
         <div id="navigation" className={clsx(isOpen && "open")}>
           <ul className="navigation-menu">
-            <li className={clsx(activePath === "/" && "active")}>
-              <Link href={`/${lang}/`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                {t("LCOD_LBL_HOMEPAGE")}
-              </Link>
-            </li>
-
-            <li className={clsx("has-submenu parent-parent-menu-item", ["/about-us", "/kvkk", "/team"].includes(activePath) && "active")}>
-              <button onClick={() => setMenuOpen("/business")} className="hover:cursor-pointer">
-                {t("LCOD_LBL_BUSINESS")}
-              </button>
-              <span className="menu-arrow"></span>
-              <ul className={clsx("submenu", menuOpen === "/business" && "open")}>
-                <li>
-                  <ul>
-                    <li className={clsx(activePath === "/about-us" && "active")}>
-                      <Link href={`/${lang}/about-us`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                        {t("LCOD_LBL_ABOUT_US")}
-                      </Link>
-                    </li>
-                    <li className={clsx(activePath === "/kvkk" && "active")}>
-                      <Link href={`/${lang}/kvkk`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                        {t("LCOD_LBL_KVKK")}
-                      </Link>
-                    </li>
-                    <li className={clsx(activePath === "/team" && "active")}>
-                      <Link href={`/${lang}/team`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                        {t("LCOD_LBL_TEAM")}
-                      </Link>
-                    </li>
-                  </ul>
-                </li>
-              </ul>
-            </li>
-
-            <li className={clsx("submenu has-submenu parent-menu-item hover:cursor-pointer", ["/import-export", "/how-does-it-work", "/faqs", "/blogs"].includes(menuOpen) && "active")}>
-              <button onClick={() => setMenuOpen("/import-export")}>
-                {t("LCOD_LBL_HOW_TO_WORK")}
-              </button>
-              <span className="menu-arrow"></span>
-              <ul className={clsx("submenu", ["/how-does-it-work", "/import-export", "/faqs", "/blogs"].includes(menuOpen) && "open")}>
-                <li>
-                  <ul>
-                    <li className={clsx(activePath === "/import-export" && "active")}>
-                      <Link href={`/${lang}/import-export`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                        {t("LCOD_LBL_FOR_BUSINESS")}
-                      </Link>
-                    </li>
-                    <li className={clsx(activePath === "/how-does-it-work" && "active")}>
-                      <Link href={`/${lang}/how-does-it-work`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                        {t("LCOD_LBL_FOR_FTS")}
-                      </Link>
-                    </li>
-                    <li className={clsx(activePath.startsWith("/blogs") && "active")}>
-                      <Link href={`/${lang}/blogs/1`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                        {t("LCOD_LBL_BLOG")}
-                      </Link>
-                    </li>
-                    <li className={clsx(activePath === "/faqs" && "active")}>
-                      <Link href={`/${lang}/faqs`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                        {t("LCOD_LBL_FAQS")} <span className="bg-cyan-500/5 border border-cyan-500/5 text-cyan-500 text-[12px] font-semibold px-2.5 py-0.5 rounded h-5">{t("LCOD_LBL_FAQS_SHORT")}</span>
-                      </Link>
-                    </li>
-                  </ul>
-                </li>
-              </ul>
-            </li>
-
-            <li className={clsx(activePath === "/packages" && "active")}>
-              <Link href={`/${lang}/packages`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                {t("LCOD_LBL_PACKAGES")}
-              </Link>
-            </li>
-
-            <li className={clsx(activePath === "/contact" && "active")}>
-              <Link href={`/${lang}/contact`} onClick={() => setIsOpen(false)} className="sub-menu-item">
-                {t("LCOD_LBL_CONTACT_US")}
-              </Link>
-            </li>
+            {navigationItems.map((item) => (
+              <li key={item.href} className={clsx(item.active && "active")}>
+                <Link href={item.href} onClick={closeMenus} className="sub-menu-item">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
       </div>

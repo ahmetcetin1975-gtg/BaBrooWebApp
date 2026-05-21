@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTranslate } from "@/components/gtg/TranslationProvider";
 
-export function ContactPageRotator({ lang }: { lang: "tr" | "en" }) {
+export function ContactPageRotator({ lang }: { lang: string }) {
   const t = useTranslate();
   return (
     <div className="container relative">
@@ -14,7 +14,7 @@ export function ContactPageRotator({ lang }: { lang: "tr" | "en" }) {
         </h3>
         <div className="mt-6">
           <Link
-            href={`/${lang}/user-register-select`}
+            href={`/${lang}/register`}
             className="py-2 px-5 inline-block font-semibold tracking-wide border align-middle duration-500 text-base text-center bg-blue-700 hover:bg-indigo-900 border-blue-700 hover:border-indigo-900 text-white rounded-md mt-4"
           >
             <i className="uil uil-phone"></i> {t("LCOD_TEXT_SLIDER_INDEX_BUTTON1")}

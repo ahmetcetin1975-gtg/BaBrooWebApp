@@ -2,12 +2,12 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Tabs } from "@/components/ui/Tabs";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthContext";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { getMessages } from "@/lib/i18n/messages";
-import { normalizeLang } from "@/lib/i18n/languages";
+import { langToDil, normalizeLang } from "@/lib/i18n/languages";
 import { ArrowRight, ChevronDown, Eye, EyeOff, Mail, X } from "lucide-react";
 import { GoogleLoginButton } from "./GoogleLoginButton";
 
@@ -41,7 +41,7 @@ function countryDisplay(item: CountryItem): string {
 
 export function LoginForm({ lang }: { lang: string }) {
   const normalizedLang = normalizeLang(lang);
-  const dil = normalizedLang === "tr" ? 1 : 2;
+  const dil = langToDil(normalizedLang);
   const { refreshSession } = useAuth();
   const [mode, setMode] = useState<"email" | "phone">("email");
   const [showPw, setShowPw] = useState(false);
@@ -59,18 +59,17 @@ export function LoginForm({ lang }: { lang: string }) {
   const [password, setPassword] = useState("");
 
   const [busy, setBusy] = useState(false);
-  const [errorPopup, setErrorPopup] = useState<string | null>(null);
+  const [supportModalMessage, setSupportModalMessage] = useState<string | null>(null);
 
-  const isTurkish = normalizedLang === "tr";
-  const supportTitle = isTurkish ? "Yardıma mı ihtiyacınız var?" : "Need Support?";
-  const supportSubtitle = isTurkish ? "Yardım için hemen bize ulaşabilirsiniz." : "We're here to help. Reach out anytime!";
-  const supportMailHref = "mailto:info@gotradego.com";
+  const supportMailHref = "mailto:info@babroo.com";
   const supportWhatsappHref = "https://wa.me/971544832320";
-  const countryPlaceholder = isTurkish ? "Ulke kodu secin" : "Select country code";
-  const countryLoading = isTurkish ? "Ulkeler yukleniyor..." : "Loading countries...";
-  const countryErrorText = isTurkish ? "Ulkeler yuklenemedi." : "Failed to load countries.";
-  const countrySearchPlaceholder = isTurkish ? "Ulke ara" : "Search country";
-  const countryNoResultsText = isTurkish ? "Sonuc bulunamadi." : "No results found.";
+  const supportTitle = t.support.title;
+  const supportSubtitle = t.support.subtitle;
+  const countryPlaceholder = t.support.countryPlaceholder;
+  const countryLoading = t.support.countryLoading;
+  const countryErrorText = t.support.countryLoadFailed;
+  const countrySearchPlaceholder = t.support.countrySearch;
+  const countryNoResultsText = t.support.countryNoResults;
 
   useEffect(() => {
     let cancelled = false;
@@ -131,7 +130,7 @@ export function LoginForm({ lang }: { lang: string }) {
   );
 
   const filteredCountries = useMemo(() => {
-    const locale = isTurkish ? "tr-TR" : "en-US";
+    const locale = normalizedLang === "tr" ? "tr-TR" : "en-US";
     const searchValue = countrySearch.trim().toLocaleLowerCase(locale);
     const searchCode = searchValue.replace(/^\+/, "");
     const allCountries = countries.filter(hasCountryId);
@@ -141,7 +140,7 @@ export function LoginForm({ lang }: { lang: string }) {
       const code = (item.TelKodu ?? "").trim().replace(/^\+/, "");
       return name.includes(searchValue) || code.includes(searchCode);
     });
-  }, [countries, countrySearch, isTurkish]);
+  }, [countries, countrySearch, normalizedLang]);
 
   const phoneCountryCode = useMemo(() => {
     const code = (selectedPhoneCountry?.TelKodu ?? "").trim().replace(/^\+/, "");
@@ -156,32 +155,32 @@ export function LoginForm({ lang }: { lang: string }) {
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setErrorPopup(null);
+    setSupportModalMessage(null);
     setBusy(true);
     try {
+      const loginPayload = {
+        password,
+        lang: normalizedLang,
+        dil,
+        playerId: "string",
+        platform: "web",
+      };
+
       if (mode === "email") {
-        console.log("[LoginForm] submit email", { email, lang, passwordLen: password.length });
-        console.trace("[LoginForm] submit email trace");
-        const res = await api.post("/api/auth/login-email", { email, password, lang });
-        console.log("[LoginForm] login email response", res);
+        await api.post("/api/auth/login-email", { email: email.trim(), ...loginPayload });
       } else {
-        console.log("[LoginForm] submit phone", {
+        await api.post("/api/auth/login-phone", {
           countryCode: phoneCountryCode,
-          phone,
-          lang,
-          passwordLen: password.length,
+          phone: phone.trim(),
+          ...loginPayload,
         });
-        console.trace("[LoginForm] submit phone trace");
-        const res = await api.post("/api/auth/login-phone", { countryCode: phoneCountryCode, phone, password, lang });
-        console.log("[LoginForm] login phone response", res);
       }
       await refreshSession();
       window.location.href = `/${lang}/home/products`;
     } catch (err: any) {
-      console.error("[LoginForm] login error", err);
       const fallbackMessage = t.login.errors.loginFailed;
       const message = String(err?.message ?? err?.raw ?? fallbackMessage);
-      setErrorPopup(message !== fallbackMessage ? message : fallbackMessage);
+      setSupportModalMessage(message !== fallbackMessage ? message : fallbackMessage);
     } finally {
       setBusy(false);
     }
@@ -223,7 +222,7 @@ export function LoginForm({ lang }: { lang: string }) {
                     type="button"
                     onClick={() => !countriesLoading && setCountryMenuOpen((prev) => !prev)}
                     disabled={countriesLoading}
-                    className="flex w-full items-center justify-between rounded-xl border bg-white px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-amber-200 disabled:opacity-70"
+                    className="flex w-full items-center justify-between rounded-xl border bg-white px-3 py-3 text-sm outline-none transition-all duration-200 hover:-translate-y-px hover:border-[#CAD3E0] hover:bg-[#FAFBFD] hover:shadow-sm focus:ring-2 focus:ring-amber-200 disabled:opacity-70"
                   >
                     <span className="inline-flex min-w-0 items-center gap-2">
                       {selectedPhoneCountry?.ResimUrl ? (
@@ -274,7 +273,7 @@ export function LoginForm({ lang }: { lang: string }) {
                                   setPhoneCountryId(item.Id);
                                   setCountryMenuOpen(false);
                                 }}
-                                className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-[14px] ${
+                                className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-[14px] transition-colors duration-150 ${
                                   selected ? "bg-[#eef1f6] text-[#1f2937]" : "text-[#374151] hover:bg-[#f6f7f9]"
                                 }`}
                               >
@@ -325,90 +324,101 @@ export function LoginForm({ lang }: { lang: string }) {
             <button
               type="button"
               onClick={() => setShowPw((s) => !s)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-neutral-400 transition-all duration-200 hover:bg-neutral-100 hover:text-neutral-700"
               aria-label={t.login.togglePassword}
             >
               {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
 
-          <div className="flex items-center justify-between text-xs">
-            <a className="text-[var(--gtg-orange)] hover:underline" href="#">
+          <div className="flex items-center justify-between text-[13px] sm:text-[14px]">
+            <Link className="font-medium text-[var(--gtg-orange)] hover:underline" href={`/${lang}/forgot-password`}>
               {t.login.forgotPassword}
-            </a>
-            <a className="text-neutral-500 hover:underline" href="#">
+            </Link>
+            <button
+              type="button"
+              onClick={() => setSupportModalMessage("")}
+              className="font-medium text-neutral-500 transition-colors duration-200 hover:text-neutral-700 hover:underline"
+            >
               {t.login.help}
-            </a>
+            </button>
           </div>
 
           <button
             disabled={!canSubmit || busy}
-            className="w-full rounded-xl bg-[var(--gtg-orange)] px-4 py-3 text-sm font-semibold text-white shadow disabled:opacity-50"
+            className="w-full rounded-xl bg-[var(--gtg-orange)] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_28px_rgba(250,165,0,0.22)] transition-all duration-200 enabled:hover:-translate-y-0.5 enabled:hover:brightness-95 enabled:hover:shadow-[0_18px_38px_rgba(250,165,0,0.28)] disabled:opacity-50"
           >
             {busy ? t.login.loggingIn : t.login.login}
           </button>
 
-          <div className="flex items-center gap-3 py-1">
+          <div className="flex items-center gap-3 py-0.5">
             <div className="h-px flex-1 bg-neutral-200" />
-            <div className="text-xs text-neutral-400">{t.login.or}</div>
+            <div className="text-[13px] font-medium text-neutral-400 sm:text-[14px]">{t.login.or}</div>
             <div className="h-px flex-1 bg-neutral-200" />
           </div>
 
           <GoogleLoginButton lang={lang} />
 
-          <div className="pt-2 text-center text-xs text-neutral-500">
+          <div className="pt-3 text-center text-[15px] text-neutral-500 sm:text-[16px]">
             {t.login.noAccount}{" "}
-            <Link className="text-[var(--gtg-orange)] hover:underline" href={`/${lang}/register`}>
+            <Link className="font-medium text-[var(--gtg-orange)] hover:underline" href={`/${lang}/register`}>
               {t.login.register}
             </Link>
           </div>
         </form>
       </div>
 
-      {errorPopup ? (
-        <div className="fixed inset-0 z-120 flex items-center justify-center bg-black/30 p-4" onClick={() => setErrorPopup(null)}>
+      {supportModalMessage !== null ? (
+        <div
+          className="fixed inset-0 z-120 flex items-center justify-center bg-black/45 p-4 backdrop-blur-[3px]"
+          onClick={() => setSupportModalMessage(null)}
+        >
           <div
-            className="relative w-full max-w-2xl rounded-2xl border border-[#E6E8EC] bg-[#F3F4F6] p-4 shadow-[0_24px_60px_rgba(17,24,39,0.25)] sm:p-6"
+            className="relative w-full max-w-[720px] rounded-[28px] border border-[#EAE3D7] bg-white px-6 py-6 shadow-[0_30px_80px_rgba(17,24,39,0.22)] sm:px-8 sm:py-7"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="login-error-popup-title"
+            aria-labelledby="login-support-popup-title"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               type="button"
-              onClick={() => setErrorPopup(null)}
-              className="absolute right-5 top-5 rounded-full p-1 text-[#8A8A8A] transition hover:bg-black/5"
-              aria-label="Close"
+              onClick={() => setSupportModalMessage(null)}
+              className="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D7DCE3] bg-white text-[#8A8A8A] shadow-[0_8px_20px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-px hover:bg-[#F8FAFC] hover:shadow-[0_14px_28px_rgba(15,23,42,0.12)]"
+              aria-label={t.support.close}
             >
               <X className="h-6 w-6" strokeWidth={1.8} />
             </button>
 
-            <h2 id="login-error-popup-title" className="pr-10 text-[21px] font-semibold leading-tight text-[#26292F]">
+            <h2 id="login-support-popup-title" className="pr-10 text-[22px] font-semibold leading-tight text-[#2A2D33] sm:text-[24px]">
               {supportTitle}
             </h2>
-            <p className="mt-2 text-[11px] leading-tight text-[#8B959E]">{supportSubtitle}</p>
+            <p className="mt-3 text-[16px] leading-[1.35] text-[#97A1AE] sm:text-[17px]">{supportSubtitle}</p>
 
-            <div className="mt-3 rounded-xl bg-white/70 px-4 py-2.5 text-[10px] leading-4 text-[#4B5563]">{errorPopup}</div>
+            {supportModalMessage ? (
+              <div className="mt-4 rounded-2xl border border-[#F5C2C7] bg-[#FFF1F2] px-4 py-3 text-[13px] font-medium leading-5 text-[#B42318]">
+                {supportModalMessage}
+              </div>
+            ) : null}
 
-            <div className="mt-6 grid gap-3 md:grid-cols-2">
+            <div className="mt-7 grid gap-4 md:grid-cols-2">
               <a
                 href={supportWhatsappHref}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--gtg-orange)] px-4 py-3 text-[14px] font-medium text-white transition hover:brightness-95"
+                className="group flex items-center justify-center gap-3 rounded-2xl border border-[#FAA500] bg-[#FAA500] px-5 py-4 text-[16px] font-semibold text-white shadow-[0_10px_24px_rgba(250,165,0,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E89A00] hover:shadow-[0_18px_36px_rgba(232,154,0,0.34)] active:translate-y-0 active:shadow-[0_10px_24px_rgba(250,165,0,0.28)] sm:text-[17px]"
               >
-                <Image src="/assets/images/client/whatsapp.png" alt="WhatsApp" width={24} height={24} className="h-6 w-6 object-contain" />
-                <span>WhatsApp</span>
-                <ArrowRight className="h-6 w-6" />
+                <WhatsAppIcon className="h-6 w-6 shrink-0 text-white" />
+                <span>{t.support.whatsapp}</span>
+                <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </a>
 
               <a
                 href={supportMailHref}
-                className="flex items-center justify-center gap-2 rounded-xl bg-[var(--gtg-orange)] px-4 py-3 text-[14px] font-medium text-white transition hover:brightness-95"
+                className="group flex items-center justify-center gap-3 rounded-2xl border border-[#FAA500] bg-[#FAA500] px-5 py-4 text-[16px] font-semibold text-white shadow-[0_10px_24px_rgba(250,165,0,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#E89A00] hover:shadow-[0_18px_36px_rgba(232,154,0,0.34)] active:translate-y-0 active:shadow-[0_10px_24px_rgba(250,165,0,0.28)] sm:text-[17px]"
               >
                 <Mail className="h-6 w-6" />
-                <span>{isTurkish ? "E-Posta" : "Mail"}</span>
-                <ArrowRight className="h-6 w-6" />
+                <span>{t.support.mail}</span>
+                <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover:translate-x-0.5" />
               </a>
             </div>
           </div>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTranslate } from "@/components/gtg/TranslationProvider";
 import { BaseAppConfig } from "@/lib/gtg/config";
 
-export function NotFoundPage({ lang }: { lang: "tr" | "en" }) {
+export function NotFoundPage({ lang }: { lang: string }) {
   const t = useTranslate();
   return (
     <section className="relative bg-indigo-600/5">

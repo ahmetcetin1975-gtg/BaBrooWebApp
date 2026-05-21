@@ -19,7 +19,7 @@ export function isGeminiQuotaError(errorMessage: string): boolean {
 }
 
 export function buildQuotaFallbackReply(dil: number): string {
-  if (dil === 2) {
+  if (dil !== 1) {
     return "Demo AI quota is currently full. Your message was saved and will continue through the standard AI flow.";
   }
   return "Demo AI kotası şu anda dolu. Mesajınız kaydedildi ve standart AI akışıyla devam edecek.";
