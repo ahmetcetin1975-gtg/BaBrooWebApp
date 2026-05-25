@@ -63,6 +63,15 @@ async function request<T>(
       }
       return (await res2.json()) as T;
     }
+
+    const refreshError = await safeJson(rr);
+    throw {
+      message: readApiMessage(refreshError, rr),
+      status: rr.status,
+      statusText: rr.statusText,
+      authExpired: true,
+      ...refreshError,
+    };
   }
 
   if (!res.ok) {

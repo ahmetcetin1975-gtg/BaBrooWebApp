@@ -19,6 +19,7 @@ export function extractTokens(data: any): { access?: string; refresh?: string } 
   ];
 
   const accessKeys = [
+    "Token",
     "AccessToken",
     "accessToken",
     "access_token",

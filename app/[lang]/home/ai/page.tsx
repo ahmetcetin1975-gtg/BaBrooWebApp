@@ -82,6 +82,11 @@ type ChatMessage = {
   text: string;
 };
 
+type WaitForAiReplyResult = {
+  aiCevap: string;
+  backendAciklama: string;
+};
+
 const AI_TEXT: Record<
   Lang,
   {
@@ -115,7 +120,7 @@ const AI_TEXT: Record<
     loading: "Yükleniyor...",
     loadingMore: "Daha fazla yükleniyor...",
     empty: "Mesaj bulunamadı.",
-    upgrade: "Pro Gemini AI BOT'a yükselt",
+    upgrade: "Gemini AI BOT",
     placeholder: "Mesajınızı yazın...",
     today: "Bugün",
     yesterday: "Dün",
@@ -137,7 +142,7 @@ const AI_TEXT: Record<
     loading: "Loading...",
     loadingMore: "Loading more...",
     empty: "No messages found.",
-    upgrade: "Upgrade to Pro Gemini AI BOT",
+    upgrade: "Gemini AI BOT",
     placeholder: "Type your message...",
     today: "Today",
     yesterday: "Yesterday",
@@ -159,7 +164,7 @@ const AI_TEXT: Record<
     loading: "Загрузка...",
     loadingMore: "Загружается еще...",
     empty: "Сообщения не найдены.",
-    upgrade: "Перейти на Pro Gemini AI BOT",
+    upgrade: "Gemini AI BOT",
     placeholder: "Напишите сообщение...",
     today: "Сегодня",
     yesterday: "Вчера",
@@ -181,7 +186,7 @@ const AI_TEXT: Record<
     loading: "Cargando...",
     loadingMore: "Cargando más...",
     empty: "No se encontraron mensajes.",
-    upgrade: "Actualizar a Pro Gemini AI BOT",
+    upgrade: "Gemini AI BOT",
     placeholder: "Escribe tu mensaje...",
     today: "Hoy",
     yesterday: "Ayer",
@@ -203,7 +208,7 @@ const AI_TEXT: Record<
     loading: "Chargement...",
     loadingMore: "Chargement de plus...",
     empty: "Aucun message trouvé.",
-    upgrade: "Passer à Pro Gemini AI BOT",
+    upgrade: "Gemini AI BOT",
     placeholder: "Écrivez votre message...",
     today: "Aujourd'hui",
     yesterday: "Hier",
@@ -227,6 +232,25 @@ function resolveBackendMessage(payload: any): string {
     }
   }
   return "";
+}
+
+function formatAiDebugError(payload: any, fallback: string): string {
+  const base = resolveBackendMessage(payload) || fallback;
+  const httpStatus =
+    Number(payload?.debug?.httpStatus) ||
+    Number(payload?.status) ||
+    Number(payload?.Status) ||
+    0;
+  const backendStatusCode =
+    Number(payload?.StatusCode) ||
+    Number(payload?.statusCode) ||
+    Number(payload?.Data?.StatusCode) ||
+    0;
+
+  const parts: string[] = [base];
+  if (httpStatus > 0) parts.push(`HTTP: ${httpStatus}`);
+  if (backendStatusCode > 0) parts.push(`Backend StatusCode: ${backendStatusCode}`);
+  return parts.join(" | ");
 }
 
 function parseDate(value: string | undefined): Date | null {
@@ -515,7 +539,7 @@ export default function AiPage() {
     return list;
   }, [items, pendingConversationNr, pendingMessages, selectedConversation]);
 
-  const waitForAiReply = async (aiMesajNr: number): Promise<string | null> => {
+  const waitForAiReply = async (aiMesajNr: number): Promise<WaitForAiReplyResult> => {
     const maxAttempts = 20;
 
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
@@ -529,11 +553,13 @@ export default function AiPage() {
       const list = Array.isArray(data?.Data?.Data) ? data.Data.Data : [];
       const target = list.find((item) => item.Nr === aiMesajNr);
       const aiCevap = (target?.AimesajMetinAiCevap ?? "").trim();
-      if (aiCevap) return aiCevap;
+      const backendAciklama = (target?.Aciklama ?? "").trim();
+      if (aiCevap) return { aiCevap, backendAciklama: "" };
+      if (backendAciklama) return { aiCevap: "", backendAciklama };
       await delay(1200);
     }
 
-    return null;
+    return { aiCevap: "", backendAciklama: "" };
   };
 
   const closeSendModal = () => {
@@ -543,6 +569,15 @@ export default function AiPage() {
     setSendSuccessMessage(null);
     setSendMessageLoading(false);
     window.dispatchEvent(new CustomEvent(CUSTOMER_UPDATED_EVENT));
+  };
+
+  const fetchAiCoinFee = async (): Promise<number | null> => {
+    const data = await api.get<AiFeeResponse>(`/api/ai-messages/fee?dil=${dil}`);
+    const nextFee =
+      typeof data?.Data?.MesajUcreti === "number" && Number.isFinite(data.Data.MesajUcreti)
+        ? data.Data.MesajUcreti
+        : null;
+    return nextFee;
   };
 
   const openSendModal = async () => {
@@ -555,11 +590,7 @@ export default function AiPage() {
     setSendMessageInput(composerInput.trim());
 
     try {
-      const data = await api.get<AiFeeResponse>(`/api/ai-messages/fee?dil=${dil}`);
-      const nextFee =
-        typeof data?.Data?.MesajUcreti === "number" && Number.isFinite(data.Data.MesajUcreti)
-          ? data.Data.MesajUcreti
-          : null;
+      const nextFee = await fetchAiCoinFee();
       setSendCoinFee(nextFee);
     } catch (error) {
       setSendCoinFee(null);
@@ -579,13 +610,17 @@ export default function AiPage() {
     pendingUserId: string,
     pendingBotId: string,
     initialReply: string,
-    noReplyText: string
+    noReplyText: string,
+    initialBackendAciklama: string
   ) => {
     let aiCevap = initialReply;
+    let backendAciklama = initialBackendAciklama;
 
     try {
       if (!aiCevap && aiMesajNr != null) {
-        aiCevap = (await waitForAiReply(aiMesajNr)) ?? "";
+        const polled = await waitForAiReply(aiMesajNr);
+        aiCevap = polled.aiCevap;
+        backendAciklama = polled.backendAciklama;
       }
 
       if (aiCevap && aiMesajNr != null) {
@@ -599,16 +634,18 @@ export default function AiPage() {
           aiCevap,
         });
       } else {
+        const fallbackText = backendAciklama || noReplyText;
         setPendingMessages((prev) =>
           prev.map((message) =>
-            message.id === pendingBotId ? { ...message, text: noReplyText } : message
+            message.id === pendingBotId ? { ...message, text: fallbackText } : message
           )
         );
       }
     } catch {
+      const fallbackText = backendAciklama || noReplyText;
       setPendingMessages((prev) =>
         prev.map((message) =>
-          message.id === pendingBotId ? { ...message, text: noReplyText } : message
+          message.id === pendingBotId ? { ...message, text: fallbackText } : message
         )
       );
     } finally {
@@ -620,9 +657,19 @@ export default function AiPage() {
     }
   };
 
-  const submitAiMessage = async () => {
-    const value = sendMessageInput.trim();
+  const submitAiMessage = async (
+    providedValue?: string,
+    options?: {
+      showSuccessModal?: boolean;
+      openModalOnError?: boolean;
+      errorModalMode?: OfferModalMode;
+    }
+  ) => {
+    const value = (providedValue ?? sendMessageInput).trim();
     if (!value) return;
+    const showSuccessModal = options?.showSuccessModal ?? true;
+    const openModalOnError = options?.openModalOnError ?? false;
+    const errorModalMode = options?.errorModalMode ?? "form";
 
     const pendingBase = Date.now();
     const pendingUserId = `p-u-${pendingBase}`;
@@ -648,23 +695,32 @@ export default function AiPage() {
       );
       const sendStatusCode = Number(sendResponse?.StatusCode);
       if (sendStatusCode !== 201) {
-        const backendMessage = resolveBackendMessage(sendResponse);
-        const popupMessage = backendMessage || text.sendCouldNot;
+        const popupMessage = formatAiDebugError(sendResponse, text.sendCouldNot);
         setPendingMessages((prev) =>
           prev.filter((message) => message.id !== pendingUserId && message.id !== pendingBotId)
         );
         setPendingConversationNr(null);
         if (/Yetersiz coin bakiyesi|Insufficient coin balance/i.test(popupMessage)) {
+          if (!sendModalOpen) setSendModalOpen(true);
           setSendModalMode("insufficient");
         } else {
+          if (openModalOnError && !sendModalOpen) {
+            setSendModalOpen(true);
+            setSendModalMode(errorModalMode);
+          }
           setSendMessageError(popupMessage);
         }
         return;
       }
 
       const successMessage = resolveBackendMessage(sendResponse);
-      setSendModalMode("success");
-      setSendSuccessMessage(successMessage || text.sent);
+      if (showSuccessModal) {
+        setSendModalMode("success");
+        setSendSuccessMessage(successMessage || text.sent);
+      } else {
+        setSendSuccessMessage(null);
+        setSendModalOpen(false);
+      }
       setComposerInput("");
       setSendMessageInput("");
 
@@ -686,9 +742,12 @@ export default function AiPage() {
           ? sendResponse.Data.aiCevap
           : ""
         ).trim();
+      let backendAciklama = "";
 
       if (!aiCevap && aiMesajNr != null) {
-        aiCevap = (await waitForAiReply(aiMesajNr)) ?? "";
+        const polled = await waitForAiReply(aiMesajNr);
+        aiCevap = polled.aiCevap;
+        backendAciklama = polled.backendAciklama;
       }
 
       if (aiCevap && aiMesajNr != null) {
@@ -702,9 +761,10 @@ export default function AiPage() {
           aiCevap,
         });
       } else {
+        const fallbackText = backendAciklama || noReplyText;
         setPendingMessages((prev) =>
           prev.map((message) =>
-            message.id === pendingBotId ? { ...message, text: noReplyText } : message
+            message.id === pendingBotId ? { ...message, text: fallbackText } : message
           )
         );
       }
@@ -715,16 +775,28 @@ export default function AiPage() {
         })
       );
       setReloadTick((prev) => prev + 1);
-      void finalizeAiReply(aiMesajNr, pendingUserId, pendingBotId, aiCevap, noReplyText);
+      void finalizeAiReply(
+        aiMesajNr,
+        pendingUserId,
+        pendingBotId,
+        aiCevap,
+        noReplyText,
+        backendAciklama
+      );
     } catch (err: any) {
       setPendingMessages((prev) =>
         prev.filter((message) => message.id !== pendingUserId && message.id !== pendingBotId)
       );
       setPendingConversationNr(null);
       if (/Yetersiz coin bakiyesi|Insufficient coin balance/i.test(resolveBackendMessage(err))) {
+        if (!sendModalOpen) setSendModalOpen(true);
         setSendModalMode("insufficient");
       } else {
-        setSendMessageError(resolveBackendMessage(err) || sendErrorText);
+        if (openModalOnError && !sendModalOpen) {
+          setSendModalOpen(true);
+          setSendModalMode(errorModalMode);
+        }
+        setSendMessageError(formatAiDebugError(err, sendErrorText));
       }
     } finally {
       setSendMessageLoading(false);
@@ -733,8 +805,31 @@ export default function AiPage() {
 
   const handleSendMessage = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!composerInput.trim()) return;
-    void openSendModal();
+    const value = composerInput.trim();
+    if (!value) return;
+
+    void (async () => {
+      try {
+        const nextFee = await fetchAiCoinFee();
+        setSendCoinFee(nextFee);
+        if ((nextFee ?? 0) <= 0) {
+          setSendMessageInput(value);
+          await submitAiMessage(value, {
+            showSuccessModal: false,
+            openModalOnError: true,
+            errorModalMode: "error",
+          });
+          return;
+        }
+        await openSendModal();
+      } catch (error) {
+        setSendModalOpen(true);
+        setSendModalMode("form");
+        setSendMessageInput(value);
+        setSendCoinFee(null);
+        setSendMessageError(resolveBackendMessage(error) || text.feeLoadError);
+      }
+    })();
   };
 
   return (
@@ -855,7 +950,7 @@ export default function AiPage() {
               ))}
           </div>
 
-          <div className="absolute bottom-4 left-4 right-4 xl:left-5 xl:right-5">
+          <div className="absolute bottom-4 left-4 right-[calc(env(safe-area-inset-right)+4.75rem)] sm:bottom-4 xl:left-5 xl:right-[calc(env(safe-area-inset-right)+5rem)]">
             <form
               onSubmit={handleSendMessage}
               className="flex w-full min-w-0 items-center gap-2 rounded-full border border-[#d2d7e0] bg-[#eceff5] px-3 py-2 sm:px-4 sm:py-2.5"

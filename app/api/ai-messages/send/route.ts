@@ -1,12 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { proxyJson } from "@/lib/server/proxy";
-import {
-  buildQuotaFallbackReply,
-  generateGeminiDemoReply,
-  isAiDemoModeEnabled,
-  isGeminiQuotaError,
-} from "@/lib/server/ai-demo";
 
 function normalizeDil(value: string | null): number {
   const parsed = Number(value ?? 1);
@@ -50,18 +44,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: "mesajMetin is required" }, { status: 400 });
   }
 
-  const pathBase = process.env.AI_SEND_MESSAGE_PATH ?? "/api/aimesaj/AIMesajGonder";
+  const pathBase = process.env.AI_SEND_MESSAGE_PATH ?? "/api/Gemini/ask";
   const qp = new URLSearchParams({
     kaynak: String(kaynak),
     dil: String(dil),
+    mesajMetin,
   });
   const path = `${pathBase}?${qp.toString()}`;
 
-  const { res, data } = await proxyJson({
+  let { res, data } = await proxyJson({
     path,
     method: "POST",
-    body: { mesajMetin },
+    body: {
+      Prompt: mesajMetin,
+    },
   });
+
+  // Some Gemini backend implementations accept GET or different body contracts.
+  // If POST returns 400, try a lightweight GET fallback with query params.
+  if (res.status === 400) {
+    const fallback = await proxyJson({
+      path,
+      method: "GET",
+    });
+    res = fallback.res;
+    data = fallback.data;
+  }
 
   if (!res.ok) {
     const backendMessage =
@@ -75,42 +83,38 @@ export async function POST(req: Request) {
         ? data.Error
         : "Failed to send AI message";
 
+    console.error("[ai-messages/send] Backend error", {
+      httpStatus: res.status,
+      backendMessage,
+      backendPayload: data,
+    });
+
     return NextResponse.json(
-      { message: backendMessage, ...data },
+      {
+        message: backendMessage,
+        debug: {
+          source: "backend",
+          httpStatus: res.status,
+        },
+        ...data,
+      },
       { status: res.status }
     );
   }
-  if (!isAiDemoModeEnabled()) {
-    return NextResponse.json(data);
+  const backendStatusCode = Number(data?.StatusCode);
+  if (Number.isFinite(backendStatusCode) && backendStatusCode !== 201) {
+    console.error("[ai-messages/send] Backend business error", {
+      httpStatus: res.status,
+      backendStatusCode,
+      backendMessage:
+        typeof data?.Message === "string"
+          ? data.Message
+          : typeof data?.message === "string"
+          ? data.message
+          : "",
+      backendPayload: data,
+    });
   }
 
-  try {
-    const aiCevap = await generateGeminiDemoReply(mesajMetin);
-    const enrichedData = {
-      ...(data ?? {}),
-      Data: {
-        ...(data?.Data ?? {}),
-        AimesajMetinAiCevap: aiCevap,
-        aiCevap,
-      },
-    };
-    return NextResponse.json(enrichedData);
-  } catch (err: any) {
-    const errorMessage = String(err?.message ?? "Failed to generate demo AI response");
-    if (isGeminiQuotaError(errorMessage)) {
-      const aiCevap = buildQuotaFallbackReply(dil);
-      const fallbackData = {
-        ...(data ?? {}),
-        Message: buildQuotaFallbackReply(dil),
-        Data: {
-          ...(data?.Data ?? {}),
-          AimesajMetinAiCevap: aiCevap,
-          aiCevap,
-        },
-      };
-      return NextResponse.json(fallbackData);
-    }
-
-    return NextResponse.json(data);
-  }
+  return NextResponse.json(data);
 }

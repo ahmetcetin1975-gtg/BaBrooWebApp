@@ -4,7 +4,7 @@ import { Check, Coins, Loader2, X } from "lucide-react";
 import { normalizeLang } from "@/lib/i18n/languages";
 import { getMessages } from "@/lib/i18n/messages";
 
-export type OfferModalMode = "form" | "insufficient" | "success";
+export type OfferModalMode = "form" | "insufficient" | "success" | "error";
 
 type OfferFlowModalProps = {
   open: boolean;
@@ -138,6 +138,37 @@ export function OfferFlowModal({
                 : kind === "ai"
                 ? t.aiSuccessText
                 : t.offerSuccessText)}
+          </p>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-8 inline-flex min-h-[58px] min-w-[180px] items-center justify-center rounded-full bg-[linear-gradient(90deg,#ff9f0a_0%,#ffb11f_100%)] px-8 text-[18px] font-semibold text-white shadow-[0_14px_30px_rgba(255,159,10,0.24)] transition hover:brightness-95"
+          >
+            {t.done}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === "error") {
+    return (
+      <div
+        className="gtg-modal-viewport fixed inset-0 z-[90] flex items-start justify-center bg-black/55 p-4 backdrop-blur-[2px] sm:items-center sm:py-6"
+        role="dialog"
+        aria-modal="true"
+        onClick={onClose}
+      >
+        <div
+          className="gtg-mobile-modal-panel w-full max-w-[540px] rounded-[28px] bg-white px-5 py-6 text-center shadow-[0_24px_70px_rgba(0,0,0,0.16)] sm:px-7 sm:py-7"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <h2 className="mt-1 text-[24px] font-bold tracking-tight text-red-600 sm:text-[26px]">
+            Error
+          </h2>
+          <p className="mx-auto mt-4 max-w-[420px] text-[16px] leading-7 text-neutral-700">
+            {error ?? "Unexpected error"}
           </p>
 
           <button

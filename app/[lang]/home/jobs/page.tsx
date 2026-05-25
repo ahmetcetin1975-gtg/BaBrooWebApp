@@ -204,7 +204,7 @@ const JOB_TEXT: Record<Lang, JobsPageText> = {
     remaining: "ilan kaldı",
     liked: "beğeni",
     reset: "Başa dön",
-    noRecipient: "Bu ilanda mesaj gönderilecek müşteri bilgisi bulunamadı.",
+    noRecipient: "Bu ilanda başvuru yapılacak ilan bilgisi bulunamadı.",
     enterMessage: "Mesajınızı yazın.",
     messageSent: "Mesajınız başarıyla gönderildi.",
     messageSendError: "Mesaj gönderilemedi.",
@@ -251,7 +251,7 @@ const JOB_TEXT: Record<Lang, JobsPageText> = {
     remaining: "listings left",
     liked: "likes",
     reset: "Start over",
-    noRecipient: "This listing does not include a customer recipient for messaging.",
+    noRecipient: "This listing does not include a valid listing id for application.",
     enterMessage: "Enter your message.",
     messageSent: "Your message has been sent successfully.",
     messageSendError: "Failed to send message.",
@@ -298,7 +298,7 @@ const JOB_TEXT: Record<Lang, JobsPageText> = {
     remaining: "вакансий осталось",
     liked: "лайков",
     reset: "Начать заново",
-    noRecipient: "В этой вакансии нет данных клиента для сообщения.",
+    noRecipient: "В этой вакансии отсутствует корректный ID объявления для отклика.",
     enterMessage: "Введите сообщение.",
     messageSent: "Ваше сообщение успешно отправлено.",
     messageSendError: "Не удалось отправить сообщение.",
@@ -345,7 +345,7 @@ const JOB_TEXT: Record<Lang, JobsPageText> = {
     remaining: "ofertas restantes",
     liked: "me gusta",
     reset: "Empezar de nuevo",
-    noRecipient: "Esta oferta no incluye un cliente destinatario para mensajes.",
+    noRecipient: "Esta oferta no incluye un ID válido de anuncio para postulación.",
     enterMessage: "Escribe tu mensaje.",
     messageSent: "Tu mensaje se envió correctamente.",
     messageSendError: "No se pudo enviar el mensaje.",
@@ -392,7 +392,7 @@ const JOB_TEXT: Record<Lang, JobsPageText> = {
     remaining: "offres restantes",
     liked: "likes",
     reset: "Recommencer",
-    noRecipient: "Cette offre ne contient pas de destinataire client pour les messages.",
+    noRecipient: "Cette offre ne contient pas d'identifiant d'annonce valide pour postuler.",
     enterMessage: "Saisissez votre message.",
     messageSent: "Votre message a été envoyé avec succès.",
     messageSendError: "Impossible d'envoyer le message.",
@@ -523,18 +523,6 @@ function jobFavorimMi(job: JobItem): boolean {
   return (job.FavorimMi ?? job.favorimMi) === true;
 }
 
-function jobRecipientId(job: JobItem | null): number | null {
-  if (!job) return null;
-  return toPositiveInt(
-    job.IlanMusteriNr ??
-      job.ilanMusteriNr ??
-      job.MusteriNr ??
-      job.musteriNr ??
-      job.MusteriId ??
-      job.musteriId
-  );
-}
-
 function normalizeJobs(response?: ApiResponse<JobItem[] | { Data?: JobItem[]; data?: JobItem[] }>): JobItem[] {
   return readItems(response).filter((item) => jobId(item) != null);
 }
@@ -545,6 +533,12 @@ function readErrorMessage(error: unknown, fallback: string): string {
     if (typeof message === "string" && message.trim()) return message.trim();
   }
   return fallback;
+}
+
+function isUnauthorizedError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const status = (error as { status?: unknown }).status;
+  return Number(status) === 401;
 }
 
 function isInsufficientBalanceError(error: unknown): boolean {
@@ -1003,6 +997,10 @@ export default function JobsHomePage() {
         setTotalCount(Number.isFinite(nextTotal) && nextTotal >= 0 ? nextTotal : nextJobs.length);
       } catch (error) {
         if (cancelled) return;
+        if (isUnauthorizedError(error)) {
+          window.location.href = `/${lang}/login`;
+          return;
+        }
         setLoadError(readErrorMessage(error, text.loadError));
         setJobs([]);
         setLastId(null);
@@ -1165,21 +1163,21 @@ export default function JobsHomePage() {
 
   async function openMessageModal(job: JobItem) {
     const title = jobTitle(job);
-    const recipientId = jobRecipientId(job);
+    const ilanNr = jobId(job);
     setMessageJob(job);
     setSendModalOpen(true);
     setSendModalMode("form");
-    setSendMessageError(recipientId == null ? text.noRecipient : null);
+    setSendMessageError(ilanNr == null ? text.noRecipient : null);
     setSendSuccessMessage(null);
     setSendMessageLoading(false);
     setSendMessageInput(text.defaultMessage(title));
     setSendCoinFee(null);
 
-    if (recipientId == null) return;
+    if (ilanNr == null) return;
 
     try {
       setSendFeeLoading(true);
-      const data = await api.get<CustomerMessageFeeResponse>(`/api/messages/customer-message-fee?dil=${dil}`);
+      const data = await api.get<CustomerMessageFeeResponse>(`/api/messages/job-application-fee?dil=${dil}`);
       const fee =
         typeof data?.Data?.MesajUcreti === "number" && Number.isFinite(data.Data.MesajUcreti)
           ? data.Data.MesajUcreti
@@ -1194,8 +1192,8 @@ export default function JobsHomePage() {
   }
 
   async function submitCustomerMessage() {
-    const recipientId = jobRecipientId(messageJob);
-    if (recipientId == null) {
+    const ilanNr = jobId(messageJob as JobItem);
+    if (ilanNr == null) {
       setSendMessageError(text.noRecipient);
       return;
     }
@@ -1210,8 +1208,8 @@ export default function JobsHomePage() {
     setSendMessageError(null);
 
     try {
-      const data = await api.post<CustomerMessageSendResponse>(`/api/messages/customer-message-send?kaynak=2&dil=${dil}`, {
-        mesajMusteriNrTo: recipientId,
+      const data = await api.post<CustomerMessageSendResponse>(`/api/messages/job-application-send?kaynak=2&dil=${dil}`, {
+        ilanNr,
         mesajMetin: trimmedMessage,
       });
 

@@ -19,6 +19,12 @@ export async function POST(req: Request) {
     jar.get("gtg_refresh")?.value ??
     body?.refreshToken ??
     body?.RefreshToken;
+  if (!refreshToken || String(refreshToken).trim() === "") {
+    const out = NextResponse.json({ message: "Invalid refresh token" }, { status: 401 });
+    out.cookies.set("gtg_access", "", { httpOnly: true, expires: new Date(0), path: "/" });
+    out.cookies.set("gtg_refresh", "", { httpOnly: true, expires: new Date(0), path: "/" });
+    return out;
+  }
   const path = process.env.REFRESH_PATH ?? "/api/auth/refresh";
 
   const { res: r, data } = await proxyJson({
@@ -29,10 +35,19 @@ export async function POST(req: Request) {
   });
 
   if (!r.ok) {
-    return NextResponse.json({ message: data?.message ?? "Refresh failed", ...data }, { status: r.status });
+    const out = NextResponse.json({ message: data?.message ?? "Refresh failed", ...data }, { status: r.status });
+    out.cookies.set("gtg_access", "", { httpOnly: true, expires: new Date(0), path: "/" });
+    out.cookies.set("gtg_refresh", "", { httpOnly: true, expires: new Date(0), path: "/" });
+    return out;
   }
 
   const { access, refresh } = extractTokens(data);
+  if (!access) {
+    const out = NextResponse.json({ message: "Refresh failed: access token missing" }, { status: 401 });
+    out.cookies.set("gtg_access", "", { httpOnly: true, expires: new Date(0), path: "/" });
+    out.cookies.set("gtg_refresh", "", { httpOnly: true, expires: new Date(0), path: "/" });
+    return out;
+  }
   const out = NextResponse.json({ ok: true });
   if (access) out.cookies.set("gtg_access", access, cookieOpts());
   if (refresh) out.cookies.set("gtg_refresh", refresh, cookieOpts());

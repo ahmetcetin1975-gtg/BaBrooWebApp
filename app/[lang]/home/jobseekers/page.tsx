@@ -920,7 +920,7 @@ export default function JobSeekersPage() {
 
   async function openMessageModal(seeker: JobSeekerItem) {
     const recipientId = seekerId(seeker);
-    const name = seekerName(seeker);
+    const name = maskedSeekerName(seeker);
     setMessageSeeker(seeker);
     setSendModalOpen(true);
     setSendModalMode("form");
@@ -934,7 +934,7 @@ export default function JobSeekersPage() {
 
     try {
       setSendFeeLoading(true);
-      const data = await api.get<CustomerMessageFeeResponse>(`/api/messages/customer-message-fee?dil=${dil}`);
+      const data = await api.get<CustomerMessageFeeResponse>(`/api/messages/customer-application-fee?dil=${dil}`);
       const fee =
         typeof data?.Data?.MesajUcreti === "number" && Number.isFinite(data.Data.MesajUcreti)
           ? data.Data.MesajUcreti
@@ -965,8 +965,8 @@ export default function JobSeekersPage() {
     setSendMessageError(null);
 
     try {
-      const data = await api.post<CustomerMessageSendResponse>(`/api/messages/customer-message-send?kaynak=2&dil=${dil}`, {
-        mesajMusteriNrTo: recipientId,
+      const data = await api.post<CustomerMessageSendResponse>(`/api/messages/customer-application-send?kaynak=2&dil=${dil}`, {
+        basvurulanMusteriNr: recipientId,
         mesajMetin: trimmedMessage,
       });
       setSendModalMode("success");

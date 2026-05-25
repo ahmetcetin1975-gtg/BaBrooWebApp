@@ -6,8 +6,6 @@ import { Bell, Loader2, X } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { langToDil, localeForLang, normalizeLang, type Lang } from "@/lib/i18n/languages";
 import { NOTIFICATIONS_UPDATED_EVENT, type NotificationsUpdatedDetail } from "@/lib/notifications/events";
-import { setSelectedProductNrCookie } from "@/lib/products/selection";
-import { setSelectedServiceNrCookie } from "@/lib/services/selection";
 
 type NotificationsModalProps = {
   lang: string;
@@ -81,10 +79,8 @@ const NOTIFICATION_COPY: Record<Lang, {
     unknownDate: "Tarih bilinmiyor",
     types: {
       task: "Görev",
-      serviceapproval: "Hizmet Onayı",
-      productapproval: "Ürün Onayı",
-      offertoservice: "Hizmet Teklifi",
-      offertoproduct: "Ürün Teklifi",
+      offertojob: "İlana Başvuru",
+      offertocustomer: "Müşteri Başvurusu",
       message: "Mesaj",
       home: "Ana Sayfa",
     },
@@ -104,10 +100,8 @@ const NOTIFICATION_COPY: Record<Lang, {
     unknownDate: "Unknown date",
     types: {
       task: "Task",
-      serviceapproval: "Service Approval",
-      productapproval: "Product Approval",
-      offertoservice: "Service Offer",
-      offertoproduct: "Product Offer",
+      offertojob: "Job Application",
+      offertocustomer: "Customer Application",
       message: "Message",
       home: "Home",
     },
@@ -127,10 +121,8 @@ const NOTIFICATION_COPY: Record<Lang, {
     unknownDate: "Дата неизвестна",
     types: {
       task: "Задача",
-      serviceapproval: "Подтверждение услуги",
-      productapproval: "Подтверждение товара",
-      offertoservice: "Предложение услуги",
-      offertoproduct: "Предложение товара",
+      offertojob: "Отклик на вакансию",
+      offertocustomer: "Заявка клиенту",
       message: "Сообщение",
       home: "Главная",
     },
@@ -150,10 +142,8 @@ const NOTIFICATION_COPY: Record<Lang, {
     unknownDate: "Fecha desconocida",
     types: {
       task: "Tarea",
-      serviceapproval: "Aprobación de servicio",
-      productapproval: "Aprobación de producto",
-      offertoservice: "Oferta de servicio",
-      offertoproduct: "Oferta de producto",
+      offertojob: "Postulación a oferta",
+      offertocustomer: "Postulación a cliente",
       message: "Mensaje",
       home: "Inicio",
     },
@@ -173,10 +163,8 @@ const NOTIFICATION_COPY: Record<Lang, {
     unknownDate: "Date inconnue",
     types: {
       task: "Mission",
-      serviceapproval: "Validation du service",
-      productapproval: "Validation du produit",
-      offertoservice: "Offre de service",
-      offertoproduct: "Offre de produit",
+      offertojob: "Candidature à l'annonce",
+      offertocustomer: "Candidature client",
       message: "Message",
       home: "Accueil",
     },
@@ -185,8 +173,6 @@ const NOTIFICATION_COPY: Record<Lang, {
 
 type NotificationDestination = {
   href: string;
-  productNr?: number | null;
-  serviceNr?: number | null;
 };
 
 function toPositiveInt(value: unknown): number | null {
@@ -200,19 +186,9 @@ function resolveNotificationDestination(item: NotificationItem, lang: string): N
   const messageFrom = toPositiveInt(item.BildirimMusteriNrFrom);
 
   switch (type) {
-    case "serviceapproval":
-      return {
-        href: `/${lang}/home/servicedetail`,
-        serviceNr: refNr,
-      };
-    case "productapproval":
-      return {
-        href: `/${lang}/home/productdetail`,
-        productNr: refNr,
-      };
     case "message":
-    case "offertoservice":
-    case "offertoproduct": {
+    case "offertojob":
+    case "offertocustomer": {
       const query = new URLSearchParams();
       if (messageFrom != null) query.set("mesajFrom", String(messageFrom));
       if (refNr != null) query.set("mesajNr", String(refNr));
@@ -223,11 +199,11 @@ function resolveNotificationDestination(item: NotificationItem, lang: string): N
       };
     }
     case "home":
-      return { href: `/${lang}/home/products` };
+      return { href: `/${lang}/home/jobs` };
     case "task":
       return { href: `/${lang}/home/missions` };
     default:
-      return { href: `/${lang}/home/products` };
+      return { href: `/${lang}/home/jobs` };
   }
 }
 
@@ -235,13 +211,9 @@ function getTypeColorClasses(type: string) {
   switch (type.trim().toLowerCase()) {
     case "task":
       return { title: "text-red-600", accent: "bg-red-500" };
-    case "serviceapproval":
-      return { title: "text-green-600", accent: "bg-green-500" };
-    case "productapproval":
-      return { title: "text-[#006400]", accent: "bg-[#006400]" };
-    case "offertoservice":
+    case "offertojob":
       return { title: "text-orange-500", accent: "bg-orange-500" };
-    case "offertoproduct":
+    case "offertocustomer":
       return { title: "text-[#FF8C00]", accent: "bg-[#FF8C00]" };
     case "message":
       return { title: "text-blue-600", accent: "bg-blue-500" };
@@ -407,9 +379,6 @@ export function NotificationsModal({ lang, open, onClose }: NotificationsModalPr
           setMarkingIds((prev) => prev.filter((nr) => nr !== notificationNr));
         }
       }
-
-      if (destination.serviceNr != null) setSelectedServiceNrCookie(destination.serviceNr);
-      if (destination.productNr != null) setSelectedProductNrCookie(destination.productNr);
 
       onClose();
       router.push(destination.href);
