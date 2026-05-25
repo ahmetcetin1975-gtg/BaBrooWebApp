@@ -5,7 +5,7 @@ function apiRoot() {
   return (
     process.env.API_ROOT ||
     process.env.NEXT_PUBLIC_API_ROOT ||
-    "http://localhost:8081"
+    "https://api.babroo.com"
   ).replace(/\/$/, "");
 }
 

@@ -1,5 +1,5 @@
 ﻿export const environment = {
-  systemUrl: "http://localhost:8081/api/",
+  systemUrl: "https://api.babroo.com/api/",
   recaptcha: {
     siteKey: "6LfazGcqAAAAADPWWFlOldiYJyqg0xnqdSFSNJML",
   },
@@ -8,11 +8,11 @@
 
 export const BaseAppConfig = {
   appName: "Babroo",
-  oldAppImagePath: "https://test1.babroo.com/GTG_IMAGES/icerikResimler/",
+  oldAppImagePath: "https://babroo.com/GTG_IMAGES/icerikResimler/",
   companyLogoDark: "/assets/images/babroo/logo-white.png",
   companyLogoLight: "/assets/images/babroo/logo-black.png",
   splash: "/assets/images/babroo/splash.png",
-  mainAppUrl: "https://test1.babroo.com",
+  mainAppUrl: "https://babroo.com",
   imagePath: "/assets/images/babroo/",
   imagePathFromSrc: "/src/assets/images/babroo/",
   locale: "tr-TR",

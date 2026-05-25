@@ -16,7 +16,7 @@ function buildGtgBackendUrl(path: string): string {
 }
 
 function buildLocalGtgBackendUrl(path: string): string {
-  return `http://localhost:8081/api/${path.replace(/^\/+/, "")}`;
+  return `https://api.babroo.com/api/${path.replace(/^\/+/, "")}`;
 }
 
 function resolveServerGtgApiRoot(): string {
@@ -24,7 +24,7 @@ function resolveServerGtgApiRoot(): string {
   const pointsToRemoteTestApi = /^https?:\/\/apitest\.gotradego\.com\/?$/i.test(root);
 
   if (process.env.NODE_ENV === "development" && pointsToRemoteTestApi) {
-    return "http://localhost:8081";
+    return "https://api.babroo.com";
   }
 
   return root;

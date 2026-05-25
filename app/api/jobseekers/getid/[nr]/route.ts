@@ -7,7 +7,7 @@ function normalizeInt(value: string | null, fallback: number): number {
 }
 
 function resolveJobseekersApiRoot(): string {
-  return (process.env.JOBSEEKERS_API_ROOT || "http://localhost:8081").replace(/\/$/, "");
+  return (process.env.JOBSEEKERS_API_ROOT || "https://api.babroo.com").replace(/\/$/, "");
 }
 
 async function parseResponse(res: Response) {

@@ -2,7 +2,7 @@
 
 Next.js 16 (App Router) + Tailwind 4 + Cookie Auth + Email/Phone/Google Login (GIS)
 
-Backend: API proxy handlers (varsayılan root: http://localhost:8081)
+Backend: API proxy handlers (varsayılan root: https://api.babroo.com)
 
 ## Kurulum
 ```bash
